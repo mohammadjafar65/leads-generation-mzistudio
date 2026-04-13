@@ -541,6 +541,51 @@ td a {
   background: var(--beige);
 }
 
+/* ── LOGIN MODAL ─────────────────────────────────────────── */
+#loginModal.overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17,17,17,0.45);
+  z-index: 2000;
+}
+#loginModal .modal {
+  width: 100%;
+  max-width: 400px;
+  padding: 0;
+}
+#loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+#loginForm label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray);
+  margin-bottom: 0.1rem;
+}
+#loginForm .modal-input {
+  font-size: 0.95rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--beige);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--black);
+}
+#loginForm .modal-input:focus {
+  border-color: var(--black);
+}
+#loginForm .btn-primary {
+  margin-top: 0.7rem;
+}
+#loginError {
+  color: #a02020;
+  font-size: 0.85rem;
+  margin-top: 0.7rem;
+  display: none;
+}
+
 /* ── FOLLOW-UP SECTION ────────────────────────────────────── */
 .followup-header {
   display: flex;

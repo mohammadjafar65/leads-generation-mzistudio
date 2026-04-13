@@ -63,6 +63,13 @@ const saveSettingsBtn   = $('saveSettings');
 const settingsStatus    = $('settingsStatus');
 const settingsPreview   = $('settingsPreview');
 
+// Auth DOM refs
+const loginModal = document.getElementById('loginModal');
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+const loginUsername = document.getElementById('loginUsername');
+const loginPassword = document.getElementById('loginPassword');
+
 // History DOM refs
 const historyList    = $('historyList');
 const historyActions = $('historyActions');
@@ -86,6 +93,8 @@ const SMTP_API = '.';
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // AUTH: Check session
+  checkAuth();
   const stored = localStorage.getItem('lm_api_key');
   if (stored) { STATE.apiKey = stored; apiKeyInput.value = stored; }
   loadAgencySettings();
@@ -94,7 +103,56 @@ document.addEventListener('DOMContentLoaded', () => {
   checkSmtpServer();
 });
 
+  function checkAuth() {
+    fetch('/auth/session', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.authenticated) {
+          loginModal.classList.add('hidden');
+          document.body.classList.remove('auth-locked');
+        } else {
+          showLogin();
+        }
+      })
+      .catch(() => showLogin());
+  }
+
+  function showLogin() {
+    loginModal.classList.remove('hidden');
+    document.body.classList.add('auth-locked');
+    loginUsername.focus();
+  }
+
 function bindEvents() {
+  // AUTH: Login form submit
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.style.display = 'none';
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value;
+      if (!username || !password) return;
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data && data.ok) {
+          loginModal.classList.add('hidden');
+          document.body.classList.remove('auth-locked');
+        } else {
+          loginError.textContent = data.error || 'Login failed';
+          loginError.style.display = 'block';
+        }
+      } catch (err) {
+        loginError.textContent = 'Network error';
+        loginError.style.display = 'block';
+      }
+    });
+  }
   // API Key (now in Settings page)
   saveKeyBtn.addEventListener('click', () => {
     STATE.apiKey = apiKeyInput.value.trim();
@@ -192,6 +250,11 @@ function bindEvents() {
 
 // ── TABS ──────────────────────────────────────────────────────
 function switchTab(tab) {
+  // Prevent switching tabs if not authenticated
+  if (document.body.classList.contains('auth-locked')) {
+    showLogin();
+    return;
+  }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-section').forEach(s => s.classList.toggle('active', s.id === `tab-${tab}`));
 }

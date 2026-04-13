@@ -54,6 +54,8 @@ async function appendToSent(smtpUser, smtpPassword, mailOptions) {
 
 const path   = require('path');
 
+const session = require('express-session');
+
 const app  = express();
 const PORT = process.env.PORT || 3001;
 // When Plesk does NOT strip the sub-path prefix, set APP_BASE_PATH=/sentmails
@@ -63,6 +65,51 @@ const BASE = (process.env.APP_BASE_PATH || '').replace(/\/$/, '');
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
+// ── SESSION MIDDLEWARE ─────────────────────────────────────
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'leadmail_secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
+}));
+
+// ── SIMPLE USER STORE (for demo) ───────────────────────────
+const USERS = [
+  { username: 'admin', password: 'password' }, // Change in production!
+];
+
+function authenticate(username, password) {
+  return USERS.find(u => u.username === username && u.password === password);
+}
+
+// ── AUTH ROUTES ────────────────────────────────────────────
+app.post('/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
+  const user = authenticate(username, password);
+  if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+  req.session.user = { username: user.username };
+  res.json({ ok: true });
+});
+
+app.get('/auth/session', (req, res) => {
+  if (req.session && req.session.user) {
+    res.json({ authenticated: true, user: req.session.user });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+app.post('/auth/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+// ── AUTH GUARD MIDDLEWARE ─────────────────────────────────
+function requireAuth(req, res, next) {
+  if (req.session && req.session.user) return next();
+  res.status(401).json({ error: 'Not authenticated' });
+}
+
 // ── SERVE STATIC FRONTEND ─────────────────────────────────────
 app.use(BASE, express.static(path.join(__dirname)));
 app.get(`${BASE}/`, (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -71,7 +118,7 @@ app.get(`${BASE}/`, (_req, res) => res.sendFile(path.join(__dirname, 'index.html
 app.get(`${BASE}/health`, (_req, res) => res.json({ ok: true }));
 
 // ── SEND SINGLE EMAIL ─────────────────────────────────────────
-app.post(`${BASE}/send`, async (req, res) => {
+app.post(`${BASE}/send`, requireAuth, async (req, res) => {
   const { smtpPassword, from, to, subject, body } = req.body;
 
   if (!smtpPassword)  return res.status(400).json({ error: 'SMTP password missing' });
@@ -118,7 +165,7 @@ app.post(`${BASE}/send`, async (req, res) => {
 
 // ── SEND BULK EMAILS ──────────────────────────────────────────
 // Body: { smtpPassword, from, emails: [{ to, subject, body }] }
-app.post(`${BASE}/send-bulk`, async (req, res) => {
+app.post(`${BASE}/send-bulk`, requireAuth, async (req, res) => {
   const { smtpPassword, from, emails } = req.body;
 
   if (!smtpPassword) return res.status(400).json({ error: 'SMTP password missing' });

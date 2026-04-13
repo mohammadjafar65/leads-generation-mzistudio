@@ -257,3 +257,19 @@
   <script src="app.js"></script>
 </body>
 </html>
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="overlay">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <h2>Login</h2>
+      </div>
+      <form id="loginForm" class="modal-body" autocomplete="off">
+        <label for="loginUsername">Username</label>
+        <input type="text" id="loginUsername" name="username" class="modal-input" required autofocus autocomplete="username" />
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" name="password" class="modal-input" required autocomplete="current-password" />
+        <button type="submit" class="btn-primary" style="margin-top:1.2rem">Login</button>
+        <p id="loginError" class="hint" style="color:#a02020;display:none;margin-top:0.7rem"></p>
+      </form>
+    </div>
+  </div>
