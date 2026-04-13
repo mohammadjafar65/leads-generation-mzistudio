@@ -608,7 +608,13 @@ Respond ONLY with valid JSON in this exact format:
 }`;
 
   const response = await callClaude(prompt);
-  return parseJSON(response);
+  const parsed = parseJSON(response);
+  // Always append Issues Found section to the email body
+  if (parsed && Array.isArray(parsed.issues) && parsed.issues.length > 0) {
+    const issuesSection = `\n\n---\nIssues Found on your website:\n${parsed.issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}`;
+    parsed.body = parsed.body.replace(/(\n)?(--+)?\s*$/g, '') + issuesSection + '\n';
+  }
+  return parsed;
 }
 
 // ── FOLLOW-UPS ────────────────────────────────────────────────
