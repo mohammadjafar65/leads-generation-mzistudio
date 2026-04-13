@@ -120,11 +120,17 @@ document.addEventListener('DOMContentLoaded', () => {
           document.body.classList.remove('auth-locked');
           if (logoutBtn) logoutBtn.style.display = '';
         } else {
-          showLogin();
+          if (!document.body.classList.contains('auth-locked')) {
+            showLogin();
+          }
           if (logoutBtn) logoutBtn.style.display = 'none';
         }
       })
-      .catch(() => showLogin());
+      .catch(() => {
+        if (!document.body.classList.contains('auth-locked')) {
+          showLogin();
+        }
+      });
   }
 
   function showLogin() {

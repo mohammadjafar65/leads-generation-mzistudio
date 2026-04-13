@@ -80,11 +80,11 @@ header {
 .sidebar {
   position: fixed;
   top: 56px;
-  right: 0;
+  left: 0;
   height: calc(100vh - 56px);
   width: 80px;
   background: var(--white);
-  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -142,12 +142,12 @@ header {
 
 /* Main content with sidebar */
 .with-sidebar {
-  margin-right: 80px;
+  margin-left: 80px;
   transition: margin 0.2s;
 }
 @media (max-width: 700px) {
   .with-sidebar {
-    margin-right: 56px;
+    margin-left: 56px;
   }
 }
 
