@@ -41,8 +41,30 @@
       <div id="leadsTable" class="table-wrap hidden">
         <div class="table-header">
           <span id="leadCount">0 leads loaded</span>
+          <button id="addLeadBtn" class="btn-primary" style="margin-right:1rem">+ Add Lead</button>
           <button id="clearLeads" class="btn-ghost">Clear</button>
         </div>
+          <!-- ADD LEAD MODAL -->
+          <div id="addLeadModal" class="overlay hidden">
+            <div class="modal" style="max-width:400px;">
+              <div class="modal-header">
+                <h2>Add Lead</h2>
+              </div>
+              <form id="addLeadForm" class="modal-body" autocomplete="off">
+                <label for="addLeadName">Name</label>
+                <input type="text" id="addLeadName" name="name" class="modal-input" required />
+                <label for="addLeadEmail">Email</label>
+                <input type="email" id="addLeadEmail" name="email" class="modal-input" required />
+                <label for="addLeadPhone">Phone</label>
+                <input type="text" id="addLeadPhone" name="phone" class="modal-input" />
+                <label for="addLeadWebsite">Website</label>
+                <input type="text" id="addLeadWebsite" name="website" class="modal-input" />
+                <button type="submit" class="btn-primary" style="margin-top:1.2rem">Add Lead</button>
+                <button type="button" id="cancelAddLead" class="btn-ghost" style="margin-left:1rem">Cancel</button>
+                <p id="addLeadError" class="hint" style="color:#a02020;display:none;margin-top:0.7rem"></p>
+              </form>
+            </div>
+          </div>
         <table>
           <thead>
             <tr>

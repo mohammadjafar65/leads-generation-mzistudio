@@ -1,3 +1,57 @@
+// Add Lead Modal DOM refs
+const addLeadModal = document.getElementById('addLeadModal');
+const addLeadForm = document.getElementById('addLeadForm');
+const addLeadName = document.getElementById('addLeadName');
+const addLeadEmail = document.getElementById('addLeadEmail');
+const addLeadPhone = document.getElementById('addLeadPhone');
+const addLeadWebsite = document.getElementById('addLeadWebsite');
+const addLeadError = document.getElementById('addLeadError');
+const addLeadBtn = document.getElementById('addLeadBtn');
+const cancelAddLead = document.getElementById('cancelAddLead');
+// Show Add Lead Modal
+if (addLeadBtn) {
+  addLeadBtn.addEventListener('click', () => {
+    addLeadForm.reset();
+    addLeadError.style.display = 'none';
+    addLeadModal.classList.remove('hidden');
+    addLeadName.focus();
+  });
+}
+
+// Hide Add Lead Modal
+if (cancelAddLead) {
+  cancelAddLead.addEventListener('click', () => {
+    addLeadModal.classList.add('hidden');
+  });
+}
+
+// Handle Add Lead Form Submission
+if (addLeadForm) {
+  addLeadForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    addLeadError.style.display = 'none';
+    const name = addLeadName.value.trim();
+    const email = addLeadEmail.value.trim();
+    const phone = addLeadPhone.value.trim();
+    const website = addLeadWebsite.value.trim();
+    if (!name || !email) {
+      addLeadError.textContent = 'Name and Email are required.';
+      addLeadError.style.display = 'block';
+      return;
+    }
+    // Add to STATE.leads
+    STATE.leads.push({
+      name,
+      email,
+      phone,
+      website,
+      status: 'PENDING',
+      selected: true
+    });
+    renderLeads();
+    addLeadModal.classList.add('hidden');
+  });
+}
 const logoutBtn = document.getElementById('logoutBtn');
 /* ─────────────────────────────────────────────────────────────
    LeadMail — app.js
