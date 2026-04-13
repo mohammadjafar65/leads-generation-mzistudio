@@ -82,7 +82,7 @@ const sendServerStatus  = $('sendServerStatus');
 const sendAllEmails     = $('sendAllEmails');
 const sendEmailModal    = $('sendEmailModal');
 
-const SMTP_API = 'http://localhost:3001';
+const SMTP_API = '';
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
