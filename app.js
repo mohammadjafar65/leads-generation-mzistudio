@@ -1133,7 +1133,9 @@ async function sendBulk(selectedOnly) {
       failed++;
       btn.disabled = false;
       btn.textContent = '✉ Retry';
-      if (badge) { badge.textContent = 'Failed'; badge.className = 'send-badge badge-failed'; }
+      const errMsg = err.message || 'Unknown error';
+      if (badge) { badge.textContent = 'Failed: ' + errMsg; badge.className = 'send-badge badge-failed'; badge.title = errMsg; }
+      toast('✗ ' + errMsg, true);
     }
 
     sendStatusText.textContent = `Sent ${sent} / ${queue.length}${failed ? ` (${failed} failed)` : ''}…`;
