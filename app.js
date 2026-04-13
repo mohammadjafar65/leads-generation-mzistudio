@@ -82,7 +82,7 @@ const sendServerStatus  = $('sendServerStatus');
 const sendAllEmails     = $('sendAllEmails');
 const sendEmailModal    = $('sendEmailModal');
 
-const SMTP_API = '';
+const SMTP_API = '.';
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
