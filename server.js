@@ -1,0 +1,163 @@
+/* ─────────────────────────────────────────────────────────────
+   LeadMail — server.js
+   Express + Nodemailer SMTP relay
+   Runs locally on http://localhost:3001
+   SMTP: mzistudio.com:465 (SSL/TLS)
+───────────────────────────────────────────────────────────── */
+
+const express    = require('express');
+const nodemailer = require('nodemailer');
+const cors       = require('cors');
+const imaps      = require('imap-simple');
+const MailComposer = require('nodemailer/lib/mail-composer');
+
+// ── IMAP HELPER: STORE IN SENT FOLDER ──────────────────────────
+async function appendToSent(smtpUser, smtpPassword, mailOptions) {
+  try {
+    const connection = await imaps.connect({
+      imap: {
+        user: smtpUser,
+        password: smtpPassword,
+        host: 'mzistudio.com',
+        port: 993,
+        tls: true,
+        tlsOptions: { rejectUnauthorized: false },
+        authTimeout: 5000
+      }
+    });
+
+    const mail = new MailComposer(mailOptions);
+    const rawMessage = await mail.compile().build();
+    const rawString = rawMessage.toString();
+
+    // Most servers use 'Sent', but some use 'INBOX.Sent'
+    try {
+      await connection.append(rawString, { mailbox: 'Sent', flags: '\\Seen' });
+    } catch (e) {
+      // Fallback to INBOX.Sent if the first attempt fails (e.g. nonexistent namespace)
+      try {
+        await connection.append(rawString, { mailbox: 'INBOX.Sent', flags: '\\Seen' });
+      } catch (e2) {
+        throw e2; // throw the second error if both fail
+      }
+    }
+    
+    connection.end();
+    console.log(`✉  Appended to Sent folder for ${mailOptions.to}`);
+  } catch (err) {
+    console.error(`✗  IMAP Append failed for ${mailOptions.to}:`, err.message);
+  }
+}
+
+
+const app  = express();
+const PORT = 3001;
+
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+
+// ── HEALTH CHECK ──────────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// ── SEND SINGLE EMAIL ─────────────────────────────────────────
+app.post('/send', async (req, res) => {
+  const { smtpPassword, from, to, subject, body } = req.body;
+
+  if (!smtpPassword)  return res.status(400).json({ error: 'SMTP password missing' });
+  if (!to)            return res.status(400).json({ error: 'Recipient (to) missing' });
+  if (!subject)       return res.status(400).json({ error: 'Subject missing' });
+  if (!body)          return res.status(400).json({ error: 'Body missing' });
+
+  const SMTP_USER = from || 'hello@mzistudio.com';
+  const FROM_NAME = req.body.fromName || SMTP_USER;
+
+  const transporter = nodemailer.createTransport({
+    host:   'mzistudio.com',
+    port:   465,
+    secure: true,          // SSL/TLS
+    auth: {
+      user: SMTP_USER,
+      pass: smtpPassword,
+    },
+    tls: {
+      // Allow self-signed certs on custom mail servers
+      rejectUnauthorized: false,
+    },
+  });
+
+  try {
+    const mailOptions = {
+      from:    `"${FROM_NAME}" <${SMTP_USER}>`,
+      to,
+      subject,
+      text:    body,
+    };
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✉  Sent to ${to} — messageId: ${info.messageId}`);
+    
+    // Save to Sent folder
+    await appendToSent(SMTP_USER, smtpPassword, mailOptions);
+
+    res.json({ ok: true, messageId: info.messageId });
+  } catch (err) {
+    console.error('SMTP error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── SEND BULK EMAILS ──────────────────────────────────────────
+// Body: { smtpPassword, from, emails: [{ to, subject, body }] }
+app.post('/send-bulk', async (req, res) => {
+  const { smtpPassword, from, emails } = req.body;
+
+  if (!smtpPassword) return res.status(400).json({ error: 'SMTP password missing' });
+  if (!Array.isArray(emails) || emails.length === 0)
+    return res.status(400).json({ error: 'emails array is empty or missing' });
+
+  const SMTP_USER = from || 'hello@mzistudio.com';
+  const FROM_NAME = req.body.fromName || SMTP_USER;
+
+  const transporter = nodemailer.createTransport({
+    host:   'mzistudio.com',
+    port:   465,
+    secure: true,
+    auth: {
+      user: SMTP_USER,
+      pass: smtpPassword,
+    },
+    tls: { rejectUnauthorized: false },
+  });
+
+  const results = [];
+  for (const mail of emails) {
+    try {
+      const mailOptions = {
+        from:    `"${FROM_NAME}" <${SMTP_USER}>`,
+        to:      mail.to,
+        subject: mail.subject,
+        text:    mail.body,
+      };
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`✉  Sent to ${mail.to}`);
+      
+      // Save to Sent folder
+      await appendToSent(SMTP_USER, smtpPassword, mailOptions);
+      
+      results.push({ to: mail.to, ok: true, messageId: info.messageId });
+    } catch (err) {
+      console.error(`✗  Failed ${mail.to}: ${err.message}`);
+      results.push({ to: mail.to, ok: false, error: err.message });
+    }
+
+    // Polite delay between sends (avoid rate limits)
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  res.json({ results });
+});
+
+app.listen(PORT, () => {
+  console.log(`\n🚀  LeadMail SMTP server running at http://localhost:${PORT}`);
+  console.log(`   SMTP host : mzistudio.com:465 (SSL)`);
+  console.log(`   Endpoints : POST /send  |  POST /send-bulk  |  GET /health\n`);
+});

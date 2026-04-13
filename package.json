@@ -1,0 +1,17 @@
+{
+  "name": "leadmail-email-generator",
+  "version": "1.0.0",
+  "description": "LeadMail — AI Email Generator with SMTP sending",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "imap": "^0.8.19",
+    "imap-simple": "^5.1.0",
+    "nodemailer": "^6.9.13"
+  }
+}

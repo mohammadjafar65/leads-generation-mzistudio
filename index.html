@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeadMail — AI Email Generator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">LeadMail</div>
+    <nav>
+      <button class="tab-btn active" data-tab="upload">Upload Leads</button>
+      <button class="tab-btn" data-tab="generate">Generate Emails</button>
+      <button class="tab-btn" data-tab="followup">Follow-ups</button>
+      <button class="tab-btn" data-tab="send">Send Emails</button>
+      <button class="tab-btn" data-tab="history">History</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- TAB: UPLOAD -->
+    <section id="tab-upload" class="tab-section active">
+      <div class="section-title">
+        <h1>Upload Client Leads</h1>
+        <p>Upload a CSV with columns: <code>name, email, phone, website</code></p>
+      </div>
+
+      <div class="upload-area" id="dropZone">
+        <input type="file" id="csvFile" accept=".csv" hidden />
+        <div class="upload-icon">↑</div>
+        <p>Drop CSV here or <span class="link" id="browseBtn">browse</span></p>
+        <p class="hint">Expects: name, email, phone, website</p>
+      </div>
+
+      <div id="leadsTable" class="table-wrap hidden">
+        <div class="table-header">
+          <span id="leadCount">0 leads loaded</span>
+          <button id="clearLeads" class="btn-ghost">Clear</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAll" /></th>
+              <th>#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Website</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="leadsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="uploadActions" class="actions hidden">
+        <button id="analyzeBtn" class="btn-primary">Analyse Websites &amp; Generate Emails</button>
+        <span class="hint" id="selectedCount">Select leads above to continue</span>
+      </div>
+    </section>
+
+    <!-- TAB: GENERATE -->
+    <section id="tab-generate" class="tab-section">
+      <div class="section-title">
+        <h1>Generated Emails</h1>
+        <p>Personalized emails based on website analysis</p>
+      </div>
+
+      <div id="emailsList" class="emails-list">
+        <div class="empty-state">No emails generated yet. Upload leads and click "Analyse Websites".</div>
+      </div>
+
+      <div class="actions" id="emailActions" style="display:none">
+        <button id="exportEmails" class="btn-primary">Export All as TXT</button>
+        <button id="copyAll" class="btn-ghost">Copy All</button>
+        <button id="sendAllEmails" class="btn-send">✉ Send All Emails</button>
+      </div>
+    </section>
+
+    <!-- TAB: FOLLOWUP -->
+    <section id="tab-followup" class="tab-section">
+      <div class="section-title">
+        <h1>Follow-up Emails</h1>
+        <p>Generate follow-up sequences for leads that haven't responded</p>
+      </div>
+
+      <div id="followupList" class="emails-list">
+        <div class="empty-state">No follow-ups generated. Generate initial emails first.</div>
+      </div>
+
+      <div class="actions" id="followupActions" style="display:none">
+        <button id="generateFollowups" class="btn-primary">Generate Follow-ups</button>
+        <button id="exportFollowups" class="btn-ghost">Export Follow-ups</button>
+      </div>
+    </section>
+
+    <!-- TAB: SEND -->
+    <section id="tab-send" class="tab-section">
+      <div class="section-title">
+        <h1>Send Emails</h1>
+        <p>Send generated emails directly to leads via your SMTP account (hello@mzistudio.com)</p>
+      </div>
+
+      <div id="sendServerStatus" class="smtp-server-status"></div>
+
+      <div id="sendList" class="emails-list">
+        <div class="empty-state">No emails to send. Generate emails first, then come here.</div>
+      </div>
+
+      <div class="actions" id="sendActions" style="display:none">
+        <button id="sendAllBtn" class="btn-send">✉ Send All</button>
+        <button id="sendSelectedBtn" class="btn-ghost">Send Selected</button>
+        <span class="hint" id="sendStatusText"></span>
+      </div>
+    </section>
+
+    <!-- TAB: HISTORY -->
+    <section id="tab-history" class="tab-section">
+      <div class="section-title">
+        <h1>History</h1>
+        <p>Previously generated lead batches — click any batch to reload its emails</p>
+      </div>
+
+      <div id="historyList" class="history-list">
+        <div class="empty-state">No history yet. Generate emails to start building history.</div>
+      </div>
+
+      <div class="actions" id="historyActions" style="display:none">
+        <button id="clearHistory" class="btn-ghost">Clear All History</button>
+      </div>
+    </section>
+
+    <!-- TAB: SETTINGS -->
+    <section id="tab-settings" class="tab-section">
+      <div class="section-title">
+        <h1>Settings</h1>
+        <p>Configure your agency details, Claude API key, and SMTP email settings</p>
+      </div>
+
+      <div class="settings-card">
+
+        <!-- API KEY -->
+        <div class="settings-section-label">Claude API Key</div>
+        <div class="settings-group">
+          <label for="apiKeyInput">API Key</label>
+          <div class="api-input-row">
+            <input type="password" id="apiKeyInput" class="settings-input" placeholder="sk-ant-api03-…" />
+            <button id="saveKey" class="btn-primary">Save</button>
+          </div>
+          <p class="hint" style="margin-top:0.4rem">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys</p>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <!-- AGENCY DETAILS -->
+        <div class="settings-section-label">Agency Details</div>
+        <div class="settings-group">
+          <label for="agentName">Your Name</label>
+          <input type="text" id="agentName" class="settings-input" placeholder="e.g. Rahul Sharma" />
+        </div>
+        <div class="settings-group">
+          <label for="agencyName">Agency Name</label>
+          <input type="text" id="agencyName" class="settings-input" placeholder="e.g. Pixel Studio" />
+        </div>
+        <div class="settings-group">
+          <label for="agencyWebsite">Agency Website</label>
+          <input type="url" id="agencyWebsite" class="settings-input" placeholder="e.g. https://pixelstudio.com" />
+        </div>
+        <div class="settings-group">
+          <label for="agencyPhone">Phone Number</label>
+          <input type="text" id="agencyPhone" class="settings-input" placeholder="e.g. +91 98765 43210" />
+        </div>
+        <div class="settings-group">
+          <label for="agencyCallLink">Book a Call Link</label>
+          <input type="url" id="agencyCallLink" class="settings-input" placeholder="e.g. https://cal.com/yourname" />
+        </div>
+        <div class="settings-group">
+          <label for="agencyTagline">Agency Tagline <span class="label-optional">(optional)</span></label>
+          <input type="text" id="agencyTagline" class="settings-input" placeholder="e.g. We build websites that convert" />
+        </div>
+
+        <div class="settings-actions">
+          <button id="saveSettings" class="btn-primary">Save Settings</button>
+          <span class="settings-status hidden" id="settingsStatus">✓ Saved</span>
+        </div>
+        <div class="settings-preview" id="settingsPreview"></div>
+
+        <div class="settings-divider"></div>
+
+        <!-- SMTP SETTINGS -->
+        <div class="settings-section-label">SMTP Email Sending</div>
+        <div class="smtp-info-box">
+          <div class="smtp-info-row"><span>Host</span><code>mzistudio.com</code></div>
+          <div class="smtp-info-row"><span>Port</span><code>465 (SSL/TLS)</code></div>
+          <div class="smtp-info-row"><span>Username</span><code>hello@mzistudio.com</code></div>
+        </div>
+        <div class="settings-group" style="margin-top:1rem">
+          <label for="smtpFromInput">From Name <span class="label-optional">(optional)</span></label>
+          <input type="text" id="smtpFromInput" class="settings-input" placeholder="e.g. Mansu — MZI Studio" />
+        </div>
+        <div class="settings-group">
+          <label for="smtpPasswordInput">Email Password</label>
+          <div class="api-input-row">
+            <input type="password" id="smtpPasswordInput" class="settings-input" placeholder="Your hello@mzistudio.com password" />
+            <button id="saveSmtp" class="btn-primary">Save</button>
+          </div>
+          <p class="hint" style="margin-top:0.4rem">Password is stored locally in your browser only — never sent to any third party.</p>
+        </div>
+        <div class="settings-group">
+          <button id="testSmtp" class="btn-ghost">Test Connection</button>
+          <span class="settings-status hidden" id="smtpTestStatus">✓ Connected</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- PROGRESS OVERLAY -->
+  <div id="progressOverlay" class="overlay hidden">
+    <div class="progress-box">
+      <div class="spinner"></div>
+      <p id="progressText">Analysing websites…</p>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <p id="progressSub" class="hint"></p>
+    </div>
+  </div>
+
+  <!-- EMAIL PREVIEW MODAL -->
+  <div id="emailModal" class="overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Email Preview</h2>
+        <button id="closeModal" class="close-btn">✕</button>
+      </div>
+      <div class="modal-meta" id="modalMeta"></div>
+      <div class="modal-body">
+        <label>Subject</label>
+        <input type="text" id="modalSubject" class="modal-input" />
+        <label>Body</label>
+        <textarea id="modalBody" class="modal-textarea"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="sendEmailModal" class="btn-send">✉ Send Email</button>
+        <button id="copyEmail" class="btn-primary">Copy Email</button>
+        <button id="modalClose2" class="btn-ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
