@@ -1,3 +1,4 @@
+const logoutBtn = document.getElementById('logoutBtn');
 /* ─────────────────────────────────────────────────────────────
    LeadMail — app.js
    Uses Claude claude-opus-4-5 API (Anthropic) to:
@@ -110,8 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data && data.authenticated) {
           loginModal.classList.add('hidden');
           document.body.classList.remove('auth-locked');
+          if (logoutBtn) logoutBtn.style.display = '';
         } else {
           showLogin();
+          if (logoutBtn) logoutBtn.style.display = 'none';
         }
       })
       .catch(() => showLogin());
@@ -121,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginModal.classList.remove('hidden');
     document.body.classList.add('auth-locked');
     loginUsername.focus();
+    if (logoutBtn) logoutBtn.style.display = 'none';
   }
 
 function bindEvents() {
@@ -143,6 +147,7 @@ function bindEvents() {
         if (data && data.ok) {
           loginModal.classList.add('hidden');
           document.body.classList.remove('auth-locked');
+          if (logoutBtn) logoutBtn.style.display = '';
         } else {
           loginError.textContent = data.error || 'Login failed';
           loginError.style.display = 'block';
@@ -151,6 +156,14 @@ function bindEvents() {
         loginError.textContent = 'Network error';
         loginError.style.display = 'block';
       }
+    });
+  }
+
+  // AUTH: Logout button
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+      showLogin();
     });
   }
   // API Key (now in Settings page)

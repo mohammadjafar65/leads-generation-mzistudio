@@ -73,9 +73,11 @@ app.use(session({
   cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
 }));
 
+
 // ── SIMPLE USER STORE (for demo) ───────────────────────────
+// To add or change users, edit the USERS array below. For production, use a database and hashed passwords!
 const USERS = [
-  { username: 'admin', password: 'password' }, // Change in production!
+  { username: 'mohammadjafar', password: 'mzistudio2324@#' }, // Example: { username: 'yourname', password: 'yourpass' }
 ];
 
 function authenticate(username, password) {
