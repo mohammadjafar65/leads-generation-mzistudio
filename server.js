@@ -5,6 +5,8 @@
    SMTP: mzistudio.com:465 (SSL/TLS)
 ───────────────────────────────────────────────────────────── */
 
+require('dotenv').config();
+
 const express    = require('express');
 const nodemailer = require('nodemailer');
 const cors       = require('cors');
