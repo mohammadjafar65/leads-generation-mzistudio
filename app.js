@@ -608,13 +608,7 @@ Respond ONLY with valid JSON in this exact format:
 }`;
 
   const response = await callClaude(prompt);
-  const parsed = parseJSON(response);
-  // Always append Issues Found section to the email body
-  if (parsed && Array.isArray(parsed.issues) && parsed.issues.length > 0) {
-    const issuesSection = `\n\n---\nIssues Found on your website:\n${parsed.issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}`;
-    parsed.body = parsed.body.replace(/(\n)?(--+)?\s*$/g, '') + issuesSection + '\n';
-  }
-  return parsed;
+  return parseJSON(response);
 }
 
 // ── FOLLOW-UPS ────────────────────────────────────────────────
@@ -755,14 +749,8 @@ function renderEmailCard(item, type) {
     </div>
     <div class="email-card-body">
       ${issueHTML}
-      <div class="email-subject-view"><strong>Subject:</strong> <span class="subject-text">${esc(item.subject)}</span></div>
-      <div class="email-subject-edit" style="display:none;"><strong>Subject:</strong> <input type="text" class="subject-input" value="${esc(item.subject)}" /></div>
-      <div class="email-text-view">${esc(item.body)}</div>
-      <div class="email-text-edit" style="display:none;"><textarea class="body-input">${esc(item.body)}</textarea></div>
-      <div class="edit-actions" style="display:none; margin-top:8px;">
-        <button class="btn-primary btn-sm save-edit-btn">Save</button>
-        <button class="btn-ghost btn-sm cancel-edit-btn">Cancel</button>
-      </div>
+      <div class="email-subject"><strong>Subject:</strong> ${esc(item.subject)}</div>
+      <div class="email-text">${esc(item.body)}</div>
     </div>
   `;
 
@@ -780,50 +768,7 @@ function renderEmailCard(item, type) {
     toggleBtn.textContent = body.classList.contains('open') ? 'Hide' : 'View';
   });
 
-  // Inline edit logic
-  const editBtn = card.querySelector('.edit-btn');
-  const subjectView = card.querySelector('.email-subject-view');
-  const subjectEdit = card.querySelector('.email-subject-edit');
-  const subjectInput = card.querySelector('.subject-input');
-  const bodyView = card.querySelector('.email-text-view');
-  const bodyEdit = card.querySelector('.email-text-edit');
-  const bodyInput = card.querySelector('.body-input');
-  const editActions = card.querySelector('.edit-actions');
-  const saveEditBtn = card.querySelector('.save-edit-btn');
-  const cancelEditBtn = card.querySelector('.cancel-edit-btn');
-
-  editBtn.addEventListener('click', () => {
-    subjectView.style.display = 'none';
-    subjectEdit.style.display = '';
-    bodyView.style.display = 'none';
-    bodyEdit.style.display = '';
-    editActions.style.display = '';
-    subjectInput.focus();
-  });
-
-  cancelEditBtn.addEventListener('click', () => {
-    subjectInput.value = item.subject;
-    bodyInput.value = item.body;
-    subjectView.style.display = '';
-    subjectEdit.style.display = 'none';
-    bodyView.style.display = '';
-    bodyEdit.style.display = 'none';
-    editActions.style.display = 'none';
-  });
-
-  saveEditBtn.addEventListener('click', () => {
-    item.subject = subjectInput.value;
-    item.body = bodyInput.value;
-    card.querySelector('.subject-text').textContent = item.subject;
-    bodyView.textContent = item.body;
-    subjectView.style.display = '';
-    subjectEdit.style.display = 'none';
-    bodyView.style.display = '';
-    bodyEdit.style.display = 'none';
-    editActions.style.display = 'none';
-    toast('Email updated!');
-  });
-
+  card.querySelector('.edit-btn').addEventListener('click', () => openModal(item));
   card.querySelector('.copy-btn').addEventListener('click', () => {
     navigator.clipboard.writeText(`Subject: ${item.subject}\n\n${item.body}`).then(() => toast('Copied!'));
   });
