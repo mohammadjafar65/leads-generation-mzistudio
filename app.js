@@ -71,6 +71,13 @@ const loginError = document.getElementById('loginError');
 const loginUsername = document.getElementById('loginUsername');
 const loginPassword = document.getElementById('loginPassword');
 
+// Detect base path from window.location.pathname (for subfolder deploys like /sentmails)
+let BASE = '';
+try {
+  const match = window.location.pathname.match(/^\/(\w+)/);
+  if (match && match[1] && match[1] !== 'index.html') BASE = '/' + match[1];
+} catch {}
+
 // History DOM refs
 const historyList    = $('historyList');
 const historyActions = $('historyActions');
@@ -105,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
   function checkAuth() {
-    fetch('/auth/session', { credentials: 'include' })
+    fetch(`${BASE}/auth/session`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data && data.authenticated) {
@@ -137,7 +144,7 @@ function bindEvents() {
       const password = loginPassword.value;
       if (!username || !password) return;
       try {
-        const res = await fetch('/auth/login', {
+        const res = await fetch(`${BASE}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -162,7 +169,7 @@ function bindEvents() {
   // AUTH: Logout button
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
-      await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch(`${BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
       showLogin();
     });
   }

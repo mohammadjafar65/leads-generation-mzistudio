@@ -85,7 +85,8 @@ function authenticate(username, password) {
 }
 
 // ── AUTH ROUTES ────────────────────────────────────────────
-app.post('/auth/login', (req, res) => {
+
+app.post(`${BASE}/auth/login`, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
   const user = authenticate(username, password);
@@ -94,7 +95,7 @@ app.post('/auth/login', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/auth/session', (req, res) => {
+app.get(`${BASE}/auth/session`, (req, res) => {
   if (req.session && req.session.user) {
     res.json({ authenticated: true, user: req.session.user });
   } else {
@@ -102,7 +103,7 @@ app.get('/auth/session', (req, res) => {
   }
 });
 
-app.post('/auth/logout', (req, res) => {
+app.post(`${BASE}/auth/logout`, (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
