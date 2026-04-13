@@ -120,17 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
           document.body.classList.remove('auth-locked');
           if (logoutBtn) logoutBtn.style.display = '';
         } else {
-          if (!document.body.classList.contains('auth-locked')) {
-            showLogin();
-          }
+          showLogin();
           if (logoutBtn) logoutBtn.style.display = 'none';
         }
       })
-      .catch(() => {
-        if (!document.body.classList.contains('auth-locked')) {
-          showLogin();
-        }
-      });
+      .catch(() => showLogin());
   }
 
   function showLogin() {
@@ -201,8 +195,8 @@ function bindEvents() {
     toast('History cleared');
   });
 
-  // Navbar Tabs
-  document.querySelectorAll('.navbar-btn').forEach(btn => {
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       switchTab(btn.dataset.tab);
       if (btn.dataset.tab === 'upload')   maybeShowSettingsWarn();
@@ -281,7 +275,7 @@ function switchTab(tab) {
     showLogin();
     return;
   }
-  document.querySelectorAll('.navbar-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-section').forEach(s => s.classList.toggle('active', s.id === `tab-${tab}`));
 }
 

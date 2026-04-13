@@ -5,48 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LeadMail — AI Email Generator</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
 </head>
 <body>
 
   <!-- HEADER -->
   <header>
     <div class="logo">LeadMail</div>
+    <nav>
+      <button class="tab-btn active" data-tab="upload">Upload Leads</button>
+      <button class="tab-btn" data-tab="generate">Generate Emails</button>
+      <button class="tab-btn" data-tab="followup">Follow-ups</button>
+      <button class="tab-btn" data-tab="send">Send Emails</button>
+      <button class="tab-btn" data-tab="history">History</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+        <button id="logoutBtn" class="btn-ghost" style="margin-left:2rem;display:none">Logout</button>
+    </nav>
   </header>
 
-  <!-- NAVBAR MENU -->
-  <nav class="navbar-menu">
-    <button class="navbar-btn active" data-tab="upload" title="Upload Leads">
-      <span class="iconify" data-icon="mdi:upload" data-width="22"></span>
-      <span class="navbar-label">Upload</span>
-    </button>
-    <button class="navbar-btn" data-tab="generate" title="Generate Emails">
-      <span class="iconify" data-icon="mdi:email-edit-outline" data-width="22"></span>
-      <span class="navbar-label">Generate</span>
-    </button>
-    <button class="navbar-btn" data-tab="followup" title="Follow-ups">
-      <span class="iconify" data-icon="mdi:email-sync-outline" data-width="22"></span>
-      <span class="navbar-label">Follow-ups</span>
-    </button>
-    <button class="navbar-btn" data-tab="send" title="Send Emails">
-      <span class="iconify" data-icon="mdi:send" data-width="22"></span>
-      <span class="navbar-label">Send</span>
-    </button>
-    <button class="navbar-btn" data-tab="history" title="History">
-      <span class="iconify" data-icon="mdi:history" data-width="22"></span>
-      <span class="navbar-label">History</span>
-    </button>
-    <button class="navbar-btn" data-tab="settings" title="Settings">
-      <span class="iconify" data-icon="mdi:cog-outline" data-width="22"></span>
-      <span class="navbar-label">Settings</span>
-    </button>
-    <button id="logoutBtn" class="navbar-btn logout-btn" title="Logout" style="display:none">
-      <span class="iconify" data-icon="mdi:logout" data-width="22"></span>
-      <span class="navbar-label">Logout</span>
-    </button>
-  </nav>
-
-  <main class="with-navbar">
+  <main>
 
     <!-- TAB: UPLOAD -->
     <section id="tab-upload" class="tab-section active">

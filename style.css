@@ -53,7 +53,7 @@ body {
   line-height: 1.6;
 }
 
-/* ── HEADER ─────────────────────────────────────────────────────────────── */
+/* ── HEADER ───────────────────────────────────────────────── */
 header {
   display: flex;
   align-items: center;
@@ -73,74 +73,34 @@ header {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--black);
+  margin-right: 1rem;
   flex-shrink: 0;
 }
 
-/* ── SIDEBAR ────────────────────────────────────────────────────────────── */
-/* ── NAVBAR MENU ─────────────────────────────────────────────── */
-.navbar-menu {
+nav {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.5rem;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  padding: 0 2rem;
-  height: 56px;
-  position: sticky;
-  top: 0;
-  z-index: 150;
+  gap: 0;
+  flex: 1;
 }
-.navbar-btn {
+
+.tab-btn {
   background: none;
   border: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  padding: 0 1.2rem;
+  height: 56px;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--gray);
-  font-size: 0.85rem;
-  padding: 0.5rem 1.1rem;
-  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  position: relative;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
 }
-.navbar-btn.active, .navbar-btn:hover {
-  background: var(--beige-dark);
+.tab-btn:hover { color: var(--black); }
+.tab-btn.active {
   color: var(--black);
-}
-.navbar-label {
-  font-size: 0.85rem;
-  display: block;
-}
-.logout-btn {
-  color: #a02020;
-}
-.logout-btn:hover {
-  background: #f5e0e0;
-  color: #a02020;
-}
-
-/* Responsive navbar: stack icons on mobile */
-@media (max-width: 700px) {
-  .navbar-menu {
-    flex-wrap: wrap;
-    gap: 0.2rem;
-    padding: 0 0.5rem;
-  }
-  .navbar-label {
-    display: none;
-  }
-  .navbar-btn {
-    padding: 0.5rem 0.5rem;
-  }
-}
-
-/* Main content with navbar */
-.with-navbar {
-  margin-left: 0;
-  margin-top: 0;
-  transition: margin 0.2s;
+  border-bottom-color: var(--black);
 }
 
 /* ── SETTINGS & HISTORY ───────────────────────────────────── */

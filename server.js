@@ -62,7 +62,10 @@ const PORT = process.env.PORT || 3001;
 // in Plesk → Node.js app → Environment variables. Leave blank for local use.
 const BASE = (process.env.APP_BASE_PATH || '').replace(/\/$/, '');
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: 'http://localhost:3000', // Change to your frontend URL if different
+  credentials: true
+}));
 app.use(express.json());
 
 // ── SESSION MIDDLEWARE ─────────────────────────────────────
@@ -70,7 +73,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'leadmail_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
+  cookie: {
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax' // Use 'none' and secure: true if using HTTPS
+    // secure: true, // Uncomment if using HTTPS
+  },
 }));
 
 
