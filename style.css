@@ -1,3 +1,29 @@
+/* ── INLINE EDIT FIELDS FOR EMAIL CARD ─────────────── */
+.email-card .subject-input,
+.email-card .body-input {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  color: var(--black);
+  background: var(--beige);
+  border: 1px solid var(--beige-dark);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  margin: 0.2rem 0 0.7rem 0;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.email-card .subject-input:focus,
+.email-card .body-input:focus {
+  outline: none;
+  border-color: var(--black);
+  box-shadow: 0 0 0 1.5px var(--black22,rgba(0,0,0,0.13));
+}
+.email-card .body-input {
+  min-height: 120px;
+  max-height: 300px;
+  resize: vertical;
+}
 /* ── RESET & BASE ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
