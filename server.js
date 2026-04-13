@@ -54,19 +54,22 @@ const path   = require('path');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
+// When Plesk does NOT strip the sub-path prefix, set APP_BASE_PATH=/sentmails
+// in Plesk → Node.js app → Environment variables. Leave blank for local use.
+const BASE = (process.env.APP_BASE_PATH || '').replace(/\/$/, '');
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // ── SERVE STATIC FRONTEND ─────────────────────────────────────
-app.use(express.static(path.join(__dirname)));
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.use(BASE, express.static(path.join(__dirname)));
+app.get(`${BASE}/`, (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get(`${BASE}/health`, (_req, res) => res.json({ ok: true }));
 
 // ── SEND SINGLE EMAIL ─────────────────────────────────────────
-app.post('/send', async (req, res) => {
+app.post(`${BASE}/send`, async (req, res) => {
   const { smtpPassword, from, to, subject, body } = req.body;
 
   if (!smtpPassword)  return res.status(400).json({ error: 'SMTP password missing' });
@@ -113,7 +116,7 @@ app.post('/send', async (req, res) => {
 
 // ── SEND BULK EMAILS ──────────────────────────────────────────
 // Body: { smtpPassword, from, emails: [{ to, subject, body }] }
-app.post('/send-bulk', async (req, res) => {
+app.post(`${BASE}/send-bulk`, async (req, res) => {
   const { smtpPassword, from, emails } = req.body;
 
   if (!smtpPassword) return res.status(400).json({ error: 'SMTP password missing' });
