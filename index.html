@@ -5,24 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LeadMail — AI Email Generator</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
 </head>
 <body>
 
   <!-- HEADER -->
   <header>
     <div class="logo">LeadMail</div>
-    <nav>
-      <button class="tab-btn active" data-tab="upload">Upload Leads</button>
-      <button class="tab-btn" data-tab="generate">Generate Emails</button>
-      <button class="tab-btn" data-tab="followup">Follow-ups</button>
-      <button class="tab-btn" data-tab="send">Send Emails</button>
-      <button class="tab-btn" data-tab="history">History</button>
-      <button class="tab-btn" data-tab="settings">Settings</button>
-        <button id="logoutBtn" class="btn-ghost" style="margin-left:2rem;display:none">Logout</button>
-    </nav>
   </header>
 
-  <main>
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="sidebar">
+    <button class="sidebar-btn active" data-tab="upload" title="Upload Leads">
+      <span class="iconify" data-icon="mdi:upload" data-width="24"></span>
+      <span class="sidebar-label">Upload</span>
+    </button>
+    <button class="sidebar-btn" data-tab="generate" title="Generate Emails">
+      <span class="iconify" data-icon="mdi:email-edit-outline" data-width="24"></span>
+      <span class="sidebar-label">Generate</span>
+    </button>
+    <button class="sidebar-btn" data-tab="followup" title="Follow-ups">
+      <span class="iconify" data-icon="mdi:email-sync-outline" data-width="24"></span>
+      <span class="sidebar-label">Follow-ups</span>
+    </button>
+    <button class="sidebar-btn" data-tab="send" title="Send Emails">
+      <span class="iconify" data-icon="mdi:send" data-width="24"></span>
+      <span class="sidebar-label">Send</span>
+    </button>
+    <button class="sidebar-btn" data-tab="history" title="History">
+      <span class="iconify" data-icon="mdi:history" data-width="24"></span>
+      <span class="sidebar-label">History</span>
+    </button>
+    <button class="sidebar-btn" data-tab="settings" title="Settings">
+      <span class="iconify" data-icon="mdi:cog-outline" data-width="24"></span>
+      <span class="sidebar-label">Settings</span>
+    </button>
+    <div class="sidebar-spacer"></div>
+    <button id="logoutBtn" class="sidebar-btn logout-btn" title="Logout" style="display:none">
+      <span class="iconify" data-icon="mdi:logout" data-width="24"></span>
+      <span class="sidebar-label">Logout</span>
+    </button>
+  </aside>
+
+  <main class="with-sidebar">
 
     <!-- TAB: UPLOAD -->
     <section id="tab-upload" class="tab-section active">

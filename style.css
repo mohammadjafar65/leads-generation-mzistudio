@@ -53,7 +53,7 @@ body {
   line-height: 1.6;
 }
 
-/* ── HEADER ───────────────────────────────────────────────── */
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
 header {
   display: flex;
   align-items: center;
@@ -73,34 +73,82 @@ header {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--black);
-  margin-right: 1rem;
   flex-shrink: 0;
 }
 
-nav {
+/* ── SIDEBAR ────────────────────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  height: calc(100vh - 56px);
+  width: 80px;
+  background: var(--white);
+  border-left: 1px solid var(--border);
   display: flex;
-  gap: 0;
-  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0 1rem 0;
+  z-index: 200;
+  transition: width 0.2s;
 }
-
-.tab-btn {
+.sidebar-btn {
   background: none;
   border: none;
-  padding: 0 1.2rem;
-  height: 56px;
-  font-family: var(--font);
-  font-size: 0.85rem;
-  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
   color: var(--gray);
+  font-size: 0.85rem;
+  padding: 0.7rem 0 0.7rem 0;
+  width: 100%;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
-  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
 }
-.tab-btn:hover { color: var(--black); }
-.tab-btn.active {
+.sidebar-btn.active, .sidebar-btn:hover {
+  background: var(--beige-dark);
   color: var(--black);
-  border-bottom-color: var(--black);
+}
+.sidebar-label {
+  font-size: 0.7rem;
+  margin-top: 0.1rem;
+  display: block;
+}
+.sidebar-spacer {
+  flex: 1;
+}
+.logout-btn {
+  margin-top: auto;
+  color: #a02020;
+}
+.logout-btn:hover {
+  background: #f5e0e0;
+  color: #a02020;
+}
+
+/* Responsive sidebar: expand on desktop, collapse to icons on mobile */
+@media (max-width: 700px) {
+  .sidebar {
+    width: 56px;
+    padding: 0.5rem 0;
+  }
+  .sidebar-label {
+    display: none;
+  }
+}
+
+/* Main content with sidebar */
+.with-sidebar {
+  margin-right: 80px;
+  transition: margin 0.2s;
+}
+@media (max-width: 700px) {
+  .with-sidebar {
+    margin-right: 56px;
+  }
 }
 
 /* ── SETTINGS & HISTORY ───────────────────────────────────── */

@@ -195,8 +195,8 @@ function bindEvents() {
     toast('History cleared');
   });
 
-  // Tabs
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+  // Sidebar Tabs
+  document.querySelectorAll('.sidebar-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       switchTab(btn.dataset.tab);
       if (btn.dataset.tab === 'upload')   maybeShowSettingsWarn();
@@ -275,7 +275,7 @@ function switchTab(tab) {
     showLogin();
     return;
   }
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-section').forEach(s => s.classList.toggle('active', s.id === `tab-${tab}`));
 }
 
