@@ -50,11 +50,17 @@ async function appendToSent(smtpUser, smtpPassword, mailOptions) {
 }
 
 
+const path   = require('path');
+
 const app  = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+
+// ── SERVE STATIC FRONTEND ─────────────────────────────────────
+app.use(express.static(path.join(__dirname)));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -157,7 +163,7 @@ app.post('/send-bulk', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀  LeadMail SMTP server running at http://localhost:${PORT}`);
+  console.log(`\n  LeadMail server running at http://localhost:${PORT}`);
   console.log(`   SMTP host : mzistudio.com:465 (SSL)`);
   console.log(`   Endpoints : POST /send  |  POST /send-bulk  |  GET /health\n`);
 });
