@@ -294,5 +294,20 @@
     </div>
   </div>
   <script src="app.js"></script>
+  <!-- EDIT EMAIL MODAL -->
+  <div id="editEmailModal" class="overlay hidden">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <h2>Edit Lead Email</h2>
+      </div>
+      <form id="editEmailForm" class="modal-body" autocomplete="off">
+        <label for="editLeadEmail">Email</label>
+        <input type="email" id="editLeadEmail" name="email" class="modal-input" required />
+        <button type="submit" class="btn-primary" style="margin-top:1.2rem">Save</button>
+        <button type="button" id="cancelEditEmail" class="btn-ghost" style="margin-left:1rem">Cancel</button>
+        <p id="editEmailError" class="hint" style="color:#a02020;display:none;margin-top:0.7rem"></p>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

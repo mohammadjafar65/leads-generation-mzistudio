@@ -609,13 +609,67 @@ function renderLeadsTable() {
       <td><input type="checkbox" class="lead-check" data-id="${lead.id}" checked /></td>
       <td>${lead.id}</td>
       <td>${esc(lead.name)}</td>
-      <td>${esc(lead.email)}</td>
+      <td>
+        <span class="lead-email-text">${esc(lead.email)}</span>
+        <button class="btn-ghost btn-sm edit-email-btn" data-id="${lead.id}" style="margin-left:6px">Edit</button>
+      </td>
       <td>${esc(lead.phone)}</td>
       <td><a href="${esc(lead.website)}" target="_blank" title="${esc(lead.website)}">${esc(trimUrl(lead.website))}</a></td>
       <td><span class="status-badge status-${lead.status}" id="status-${lead.id}">${lead.status}</span></td>
     `;
+    // Add event listener for edit button
+    tr.querySelector('.edit-email-btn').addEventListener('click', () => openEditEmailModal(lead.id, lead.email));
     leadsBody.appendChild(tr);
   });
+// Edit Email Modal DOM refs
+const editEmailModal = document.getElementById('editEmailModal');
+const editEmailForm = document.getElementById('editEmailForm');
+const editLeadEmail = document.getElementById('editLeadEmail');
+const editEmailError = document.getElementById('editEmailError');
+const cancelEditEmail = document.getElementById('cancelEditEmail');
+let editingLeadId = null;
+
+// Show Edit Email Modal
+function openEditEmailModal(leadId, currentEmail) {
+  editingLeadId = leadId;
+  editLeadEmail.value = currentEmail;
+  editEmailError.style.display = 'none';
+  editEmailModal.classList.remove('hidden');
+  editLeadEmail.focus();
+}
+
+// Hide Edit Email Modal
+if (cancelEditEmail) {
+  cancelEditEmail.addEventListener('click', () => {
+    editEmailModal.classList.add('hidden');
+    editingLeadId = null;
+  });
+}
+
+// Handle Edit Email Form Submission
+if (editEmailForm) {
+  editEmailForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    editEmailError.style.display = 'none';
+    const newEmail = editLeadEmail.value.trim();
+    if (!newEmail) {
+      editEmailError.textContent = 'Email is required.';
+      editEmailError.style.display = 'block';
+      return;
+    }
+    // Update email in STATE.leads
+    const lead = STATE.leads.find(l => l.id === editingLeadId);
+    if (lead) {
+      lead.email = newEmail;
+      renderLeadsTable();
+      editEmailModal.classList.add('hidden');
+      editingLeadId = null;
+    } else {
+      editEmailError.textContent = 'Lead not found.';
+      editEmailError.style.display = 'block';
+    }
+  });
+}
 
   leadCount.textContent = `${STATE.leads.length} lead${STATE.leads.length !== 1 ? 's' : ''} loaded`;
   updateSelectedCount();
