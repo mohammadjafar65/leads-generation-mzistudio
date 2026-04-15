@@ -747,6 +747,92 @@ async function runAnalysis() {
   }
 }
 
+// ── INDUSTRY DETECTION & TONE MAPPING ────────────────────────
+const INDUSTRY_TONES = [
+  {
+    industries: ['restaurant', 'cafe', 'food', 'bakery', 'pizza', 'kitchen', 'bistro', 'diner', 'catering', 'bar', 'pub', 'grill', 'sushi', 'bbq'],
+    industry: 'food & hospitality',
+    tone: 'warm, community-focused, and inviting — like one local business owner talking to another',
+    opening: 'Open by acknowledging how much effort goes into running a restaurant or food business, then gently pivot to how their online presence may not be doing justice to the experience they offer in person.',
+    structure: 'Start with genuine respect for their craft, highlight the gap between their in-person quality and online presence, then offer to bridge that gap.',
+    subject_hint: 'Make the subject feel personal and local, e.g. referencing their food or neighbourhood.',
+  },
+  {
+    industries: ['clinic', 'dental', 'dentist', 'doctor', 'medical', 'health', 'pharmacy', 'physio', 'therapy', 'hospital', 'care', 'skin', 'beauty', 'salon', 'spa', 'wellness', 'yoga', 'fitness', 'gym'],
+    industry: 'health, wellness, or beauty',
+    tone: 'professional, trustworthy, and calm — like a trusted advisor, not a salesperson',
+    opening: 'Open by acknowledging the trust patients or clients place in them, then mention that their website is often the very first touchpoint — and first impressions matter enormously in healthcare and wellness.',
+    structure: 'Build trust first, then identify specific credibility or UX gaps on their site, then offer a solution that reflects their professionalism.',
+    subject_hint: 'Keep the subject line clean and professional, not salesy. Focus on trust and credibility.',
+  },
+  {
+    industries: ['law', 'legal', 'solicitor', 'attorney', 'barrister', 'advocate', 'notary', 'accountant', 'accounting', 'finance', 'financial', 'tax', 'audit', 'consulting', 'consultant'],
+    industry: 'professional services (legal, financial, or consulting)',
+    tone: 'highly professional, precise, and respectful — peer-to-peer, not vendor-to-client',
+    opening: 'Open by noting that in professional services, a firm\'s website is a direct reflection of its credibility and attention to detail — then point out specific areas where their site falls short of that standard.',
+    structure: 'Lead with credibility and the high standards their clients expect, surface specific site weaknesses as a risk to their reputation, position the redesign as protecting and growing that reputation.',
+    subject_hint: 'Use a subject line that feels formal and credible, focused on reputation or client experience.',
+  },
+  {
+    industries: ['shop', 'store', 'retail', 'boutique', 'fashion', 'clothing', 'jewellery', 'jewelry', 'gift', 'ecommerce', 'online store', 'product', 'furniture', 'decor', 'toys', 'electronics'],
+    industry: 'retail or ecommerce',
+    tone: 'results-focused and commercial — speak directly to sales, conversions, and lost revenue',
+    opening: 'Open by pointing out that for a retail or ecommerce business, the website IS the storefront — and every friction point is a lost sale.',
+    structure: 'Lead with a specific revenue or conversion angle, identify the UX and trust gaps costing them sales, then offer a direct solution.',
+    subject_hint: 'Use a subject line focused on growth, sales, or "leaving money on the table."',
+  },
+  {
+    industries: ['school', 'college', 'university', 'academy', 'education', 'tutor', 'tutoring', 'training', 'coach', 'coaching', 'course', 'learning', 'childcare', 'nursery', 'kindergarten'],
+    industry: 'education or coaching',
+    tone: 'encouraging, clear, and parent- or student-focused — approachable but professional',
+    opening: 'Open by acknowledging the important work they do in educating or developing people, then point out that families and students are increasingly making decisions based on first impressions online.',
+    structure: 'Lead with the impact of their work, highlight how their digital presence may not reflect that quality, offer to help them attract the right students or clients.',
+    subject_hint: 'Keep the subject line warm and focused on reach or enrolment, not technical issues.',
+  },
+  {
+    industries: ['construction', 'builder', 'building', 'contractor', 'architecture', 'architect', 'plumber', 'plumbing', 'electrician', 'electric', 'roofing', 'painting', 'renovation', 'interior', 'landscape', 'landscaping', 'cleaning', 'pest', 'hvac', 'solar'],
+    industry: 'trades or construction',
+    tone: 'straight-talking, practical, and no-nonsense — tradies respect directness over fluff',
+    opening: 'Open bluntly: their work is clearly good, but their website doesn\'t show it. Potential clients are choosing competitors purely based on first impressions online.',
+    structure: 'Skip lengthy pleasantries. Say what the problem is clearly, show you understand their industry, offer a practical fix.',
+    subject_hint: 'Make the subject direct and practical, e.g. "Your website is losing you jobs" or similar.',
+  },
+  {
+    industries: ['hotel', 'accommodation', 'motel', 'resort', 'airbnb', 'rental', 'travel', 'tour', 'tourism', 'real estate', 'realty', 'property', 'estate agent', 'letting'],
+    industry: 'hospitality, travel, or real estate',
+    tone: 'aspirational and experience-driven — focus on the emotions and expectations their clients arrive with',
+    opening: 'Open by noting that in hospitality, travel, or property, the website sets the emotional expectation before a client ever arrives — and a poor site creates doubt, not excitement.',
+    structure: 'Paint the picture of what their ideal customer expects to feel, highlight the gap on their current site, offer to create a digital experience that matches the real one.',
+    subject_hint: 'Use a subject line that evokes quality and experience, not just technical improvements.',
+  },
+  {
+    industries: ['tech', 'software', 'app', 'startup', 'saas', 'digital', 'agency', 'marketing', 'seo', 'media', 'design', 'creative', 'studio', 'it ', 'it services', 'developer', 'development'],
+    industry: 'tech, digital, or creative',
+    tone: 'peer-level, sharp, and insight-driven — they are tech-savvy, so avoid generic observations and go specific',
+    opening: 'Open by noting that as a digital-first business, their website is their number one sales tool — and right now it may be quietly undermining the quality of work they actually deliver.',
+    structure: 'Lead with a sharp, specific insight about their site, not generic fluff. Identify a few concrete issues, then offer clear measurable value.',
+    subject_hint: 'Make the subject crisp and specific — no clichés. It should feel like it came from someone who actually looked at their site.',
+  },
+];
+
+const DEFAULT_TONE = {
+  industry: 'small business',
+  tone: 'professional yet approachable — genuine, human, and respectful of their time',
+  opening: 'Open by acknowledging that running a business is demanding and that their website might not be getting the attention it deserves, then gently point out specific areas where it could be working harder for them.',
+  structure: 'Keep it simple: acknowledge their effort, surface 2-3 real issues, offer a clear next step.',
+  subject_hint: 'Keep the subject line conversational and curious, not salesy.',
+};
+
+function detectIndustryTone(lead) {
+  const text = ((lead.name || '') + ' ' + (lead.website || '') + ' ' + (lead.email || '')).toLowerCase();
+  for (const profile of INDUSTRY_TONES) {
+    if (profile.industries.some(keyword => text.includes(keyword))) {
+      return profile;
+    }
+  }
+  return DEFAULT_TONE;
+}
+
 async function analyseAndGenerate(lead) {
   const websiteContext = lead.website
     ? `The client's website is: ${lead.website}`
@@ -762,34 +848,48 @@ async function analyseAndGenerate(lead) {
     ? `If using a CTA, invite them to book a call here: ${a.callLink}`
     : 'Use a soft CTA like replying to the email or scheduling a quick chat.';
 
-  const prompt = `You are an expert web strategist and sales copywriter helping a premium web design agency reach out to potential clients.
+  const style = detectIndustryTone(lead);
+
+  const prompt = `You are a real human — a senior web strategist at a boutique web design agency — writing a personal outreach email to a potential client. You are NOT an AI assistant generating a template. You are writing one specific email to one specific business.
 
 ${senderContext}
 
 CLIENT DETAILS:
-- Name / Business: ${lead.name || 'Unknown'}
+- Business Name: ${lead.name || 'Unknown'}
+- Industry: ${style.industry}
 - Email: ${lead.email || 'N/A'}
 - Phone: ${lead.phone || 'N/A'}
 - ${websiteContext}
 
-YOUR TASK:
-1. WEBSITE ANALYSIS: Analyse the client's website (based on the URL provided) and identify 3-6 specific, realistic problems that:
-   - Give a poor first impression to visitors
-   - Hurt conversion rates and lead generation
-   - May signal an outdated or unprofessional online presence
-   - Could be blocking business growth
-   Focus on common real-world issues: slow load times, no mobile optimization, outdated design, missing CTAs, poor navigation, no SSL, weak copy, lack of trust signals, poor SEO structure, etc.
+TONE & VOICE (this is critical — do NOT ignore):
+- Write in this exact tone: ${style.tone}
+- Opening: ${style.opening}
+- Email structure: ${style.structure}
+- Subject line guidance: ${style.subject_hint}
 
-2. PERSONALISED EMAIL: Write a professional, warm outreach email offering website redesign and full website building services.
-   The email MUST:
-   - Address the client by their first name (if available)
-   - Reference their specific website and 2-3 of the identified problems naturally
-   - Be conversational, not salesy or aggressive
-   - Offer clear value, not a hard sell
+STRICT HUMAN WRITING RULES — read these carefully:
+1. Do NOT use AI phrases like "I hope this email finds you well", "I wanted to reach out", "I came across your website", "touch base", "moving forward", "leverage", "game-changer", "tailored solutions", or any corporate filler.
+2. Do NOT open with a compliment followed immediately by a "but". That pattern is obvious and robotic.
+3. Write short sentences. Vary sentence length. Use plain, everyday language.
+4. Sound like a real person who actually visited the website and noticed something — not someone running a bulk email campaign.
+5. Be specific. Generic lines like "your website needs improvement" are not acceptable. Reference their actual business type and realistic issues.
+6. Do not use bullet points inside the email body. Write in natural prose paragraphs.
+7. Never use exclamation marks more than once in the entire email (if at all).
+8. The email must feel like it was written specifically for this one business, not copy-pasted with a name swapped.
+
+YOUR TASK:
+1. WEBSITE ANALYSIS: Identify 3–5 specific, realistic problems likely affecting this type of business website:
+   - Issues that hurt first impressions for their specific type of customer
+   - Conversion problems relevant to their industry
+   - Trust, credibility, or UX gaps a real visitor would notice
+   - Technical issues common in their sector (slow speed, no mobile layout, outdated design, weak CTAs, no reviews/testimonials, poor navigation, missing contact info, no SSL, thin copy, etc.)
+
+2. EMAIL: Write the outreach email following all tone and structure rules above.
+   - Address the client by first name (extract from business name if needed, otherwise use their business name naturally)
+   - Reference their specific website and 2–3 of the identified problems woven naturally into the text
    - ${callCTA}
-   - Be 180-240 words max — punchy and scannable
-   - Sound human, not AI-generated
-   - End with the sender's full sign-off using the SENDER details above (name, agency, phone if provided)
+   - 170–230 words max — tight, readable, no waffle
+   - End with a natural sign-off using the SENDER details above
 
 Respond ONLY with valid JSON in this exact format:
 {
