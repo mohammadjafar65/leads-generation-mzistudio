@@ -24,6 +24,12 @@ if (cancelAddLead) {
     addLeadModal.classList.add('hidden');
   });
 }
+const cancelAddLeadInner = document.getElementById('cancelAddLeadInner');
+if (cancelAddLeadInner) {
+  cancelAddLeadInner.addEventListener('click', () => {
+    addLeadModal.classList.add('hidden');
+  });
+}
 
 // Handle Add Lead Form Submission
 if (addLeadForm) {
@@ -45,10 +51,12 @@ if (addLeadForm) {
       email,
       phone,
       website,
-      status: 'PENDING',
+      instagram: '',
+      linkedin: '',
+      status: 'pending',
       selected: true
     });
-    renderLeads();
+    renderLeadsTable();
     addLeadModal.classList.add('hidden');
   });
 }
@@ -69,6 +77,7 @@ const STATE = {
   leads: [],
   emails: [],
   followups: [],
+  dms: [],
 };
 
 // ── DOM REFS ──────────────────────────────────────────────────
@@ -106,6 +115,30 @@ const exportEmails = $('exportEmails');
 const copyAll = $('copyAll');
 const generateFollowups = $('generateFollowups');
 const exportFollowups = $('exportFollowups');
+
+// Social / DMs DOM refs
+const socialsList      = $('socialsList');
+const socialsActions   = $('socialsActions');
+const dmsList          = $('dmsList');
+const dmsActions       = $('dmsActions');
+const findAllSocialsBtn  = $('findAllSocialsBtn');
+const findAllSocialsBtn2 = $('findAllSocialsBtn2');
+const generateDMsBtn   = $('generateDMsBtn');
+const exportDMs        = $('exportDMs');
+const copyAllDMs       = $('copyAllDMs');
+const exportSocials    = $('exportSocials');
+
+// Stats DOM refs
+const statLeads  = $('statLeads');
+const statEmails = $('statEmails');
+const statSocials= $('statSocials');
+const statDMs    = $('statDMs');
+const navBadgeLeads  = $('navBadgeLeads');
+const navBadgeEmails = $('navBadgeEmails');
+const navBadgeDMs    = $('navBadgeDMs');
+
+// Topbar
+const topbarTitle = $('topbarTitle');
 
 // Settings DOM refs
 const agentNameInput    = $('agentName');
@@ -256,6 +289,7 @@ function bindEvents() {
       if (btn.dataset.tab === 'upload')   maybeShowSettingsWarn();
       if (btn.dataset.tab === 'history')  renderHistoryTab();
       if (btn.dataset.tab === 'send')     renderSendTab();
+      if (btn.dataset.tab === 'socials')  renderSocialsTab();
     });
   });
 
@@ -300,6 +334,16 @@ function bindEvents() {
   generateFollowups.addEventListener('click', runFollowups);
   exportFollowups.addEventListener('click', exportAllFollowups);
 
+  // Social handles
+  if (findAllSocialsBtn) findAllSocialsBtn.addEventListener('click', () => runFindSocials());
+  if (findAllSocialsBtn2) findAllSocialsBtn2.addEventListener('click', () => runFindSocials());
+  if (exportSocials) exportSocials.addEventListener('click', exportSocialsCSV);
+
+  // Cold DMs
+  if (generateDMsBtn) generateDMsBtn.addEventListener('click', runGenerateDMs);
+  if (exportDMs) exportDMs.addEventListener('click', exportAllDMs);
+  if (copyAllDMs) copyAllDMs.addEventListener('click', copyAllDMsText);
+
   // SMTP
   saveSmtpBtn.addEventListener('click', saveSmtpSettings);
   testSmtpBtn.addEventListener('click', testSmtpConnection);
@@ -323,14 +367,17 @@ function bindEvents() {
 }
 
 // ── TABS ──────────────────────────────────────────────────────
+const TAB_TITLES = {
+  upload: 'Leads', generate: 'Generate Emails', followup: 'Follow-ups',
+  socials: 'Social Handles', dms: 'Cold DMs', send: 'Send Emails',
+  history: 'History', settings: 'Settings',
+};
+
 function switchTab(tab) {
-  // Prevent switching tabs if not authenticated
-  if (document.body.classList.contains('auth-locked')) {
-    showLogin();
-    return;
-  }
+  if (document.body.classList.contains('auth-locked')) { showLogin(); return; }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-section').forEach(s => s.classList.toggle('active', s.id === `tab-${tab}`));
+  if (topbarTitle) topbarTitle.textContent = TAB_TITLES[tab] || tab;
 }
 
 // ── HISTORY ──────────────────────────────────────────────────────
@@ -567,6 +614,8 @@ function parseCSV(text) {
       email: cols.email >= 0 ? cells[cols.email] || '' : '',
       phone: cols.phone >= 0 ? cells[cols.phone] || '' : '',
       website: cols.website >= 0 ? cells[cols.website] || '' : '',
+      instagram: '',
+      linkedin: '',
       status: 'pending',
       issues: [],
       generatedEmail: null,
@@ -615,10 +664,16 @@ function renderLeadsTable() {
       </td>
       <td>${esc(lead.phone)}</td>
       <td><a href="${esc(lead.website)}" target="_blank" title="${esc(lead.website)}">${esc(trimUrl(lead.website))}</a></td>
+      <td id="ig-cell-${lead.id}">${renderSocialCell(lead.instagram, 'ig', lead.id)}</td>
+      <td id="li-cell-${lead.id}">${renderSocialCell(lead.linkedin, 'li', lead.id)}</td>
       <td><span class="status-badge status-${lead.status}" id="status-${lead.id}">${lead.status}</span></td>
     `;
-    // Add event listener for edit button
     tr.querySelector('.edit-email-btn').addEventListener('click', () => openEditEmailModal(lead.id, lead.email));
+    // Per-row find socials buttons
+    const igFindBtn = tr.querySelector('.find-social-btn[data-type="ig"]');
+    const liFindBtn = tr.querySelector('.find-social-btn[data-type="li"]');
+    if (igFindBtn) igFindBtn.addEventListener('click', () => findSocialsForLead(lead));
+    if (liFindBtn) liFindBtn.addEventListener('click', () => findSocialsForLead(lead));
     leadsBody.appendChild(tr);
   });
 // Edit Email Modal DOM refs
@@ -641,6 +696,13 @@ function openEditEmailModal(leadId, currentEmail) {
 // Hide Edit Email Modal
 if (cancelEditEmail) {
   cancelEditEmail.addEventListener('click', () => {
+    editEmailModal.classList.add('hidden');
+    editingLeadId = null;
+  });
+}
+const cancelEditEmailInner = document.getElementById('cancelEditEmailInner');
+if (cancelEditEmailInner) {
+  cancelEditEmailInner.addEventListener('click', () => {
     editEmailModal.classList.add('hidden');
     editingLeadId = null;
   });
@@ -673,10 +735,41 @@ if (editEmailForm) {
 
   leadCount.textContent = `${STATE.leads.length} lead${STATE.leads.length !== 1 ? 's' : ''} loaded`;
   updateSelectedCount();
+  updateStats();
 
   document.querySelectorAll('.lead-check').forEach(c => {
     c.addEventListener('change', updateSelectedCount);
   });
+}
+
+function renderSocialCell(handle, type, leadId) {
+  if (handle) {
+    const url = type === 'ig'
+      ? `https://instagram.com/${handle}`
+      : `https://linkedin.com/company/${handle}`;
+    const icon = type === 'ig' ? '📸' : '🔗';
+    return `<div class="social-handle">${icon} <a href="${esc(url)}" target="_blank">@${esc(handle)}</a></div>`;
+  }
+  if (!document.getElementById(`status-${leadId}`) || STATE.leads.find(l=>l.id===leadId)?.website) {
+    return `<button class="find-social-btn btn-sm" data-type="${type}" title="Find ${type === 'ig' ? 'Instagram' : 'LinkedIn'}">🔍 Find</button>`;
+  }
+  return '<span style="color:var(--text-3);font-size:0.75rem">—</span>';
+}
+
+function updateStats() {
+  const leadsCount = STATE.leads.length;
+  const emailsCount = STATE.emails.length;
+  const socialsCount = STATE.leads.filter(l => l.instagram || l.linkedin).length;
+  const dmsCount = STATE.dms.length;
+
+  if (statLeads)   statLeads.textContent   = leadsCount;
+  if (statEmails)  statEmails.textContent  = emailsCount;
+  if (statSocials) statSocials.textContent = socialsCount;
+  if (statDMs)     statDMs.textContent     = dmsCount;
+
+  if (navBadgeLeads)  { navBadgeLeads.textContent  = leadsCount;  navBadgeLeads.style.display  = leadsCount  ? '' : 'none'; }
+  if (navBadgeEmails) { navBadgeEmails.textContent = emailsCount; navBadgeEmails.style.display = emailsCount ? '' : 'none'; }
+  if (navBadgeDMs)    { navBadgeDMs.textContent    = dmsCount;    navBadgeDMs.style.display    = dmsCount    ? '' : 'none'; }
 }
 
 function updateSelectedCount() {
@@ -741,8 +834,9 @@ async function runAnalysis() {
   if (STATE.emails.length > 0) {
     emailActions.style.display = 'flex';
     followupActions.style.display = 'flex';
-    saveBatch();           // ← auto-save to history
+    saveBatch();
     switchTab('generate');
+    updateStats();
     toast(`${STATE.emails.length} email${STATE.emails.length !== 1 ? 's' : ''} generated`);
   }
 }
@@ -1368,8 +1462,7 @@ function renderSendTab() {
   });
 }
 
-async function sendBulk(selectedOnly) {
-  if (!STATE.smtp.password) {
+async function sendBulk(selectedOnly) {  if (!STATE.smtp.password) {
     toast('No SMTP password — go to Settings → SMTP Email Sending', true);
     return;
   }
@@ -1437,4 +1530,271 @@ async function sendBulk(selectedOnly) {
   sendSelectedBtn.disabled = false;
   sendStatusText.textContent = `Done — ${sent} sent${failed ? `, ${failed} failed` : ''}`;
   toast(`✓ Sent ${sent} email${sent !== 1 ? 's' : ''}${failed ? ` · ${failed} failed` : ''}`);
+}
+
+// ── SOCIAL HANDLE FINDER ──────────────────────────────────────
+async function findSocialsForLead(lead) {
+  if (!lead.website) { toast('This lead has no website', true); return; }
+  updateLeadStatus(lead.id, 'finding');
+
+  try {
+    const res = await fetch(`${SMTP_API}/find-socials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ website: lead.website }),
+    });
+    const data = await res.json();
+    lead.instagram = data.instagram || lead.instagram || '';
+    lead.linkedin  = data.linkedin  || lead.linkedin  || '';
+
+    // Update table cells in-place
+    const igCell = document.getElementById(`ig-cell-${lead.id}`);
+    const liCell = document.getElementById(`li-cell-${lead.id}`);
+    if (igCell) igCell.innerHTML = renderSocialCell(lead.instagram, 'ig', lead.id);
+    if (liCell) liCell.innerHTML = renderSocialCell(lead.linkedin, 'li', lead.id);
+    // Re-bind buttons
+    if (igCell) { const b = igCell.querySelector('.find-social-btn'); if (b) b.addEventListener('click', () => findSocialsForLead(lead)); }
+    if (liCell) { const b = liCell.querySelector('.find-social-btn'); if (b) b.addEventListener('click', () => findSocialsForLead(lead)); }
+
+    updateLeadStatus(lead.id, lead.instagram || lead.linkedin ? 'done' : 'pending');
+    updateStats();
+    return data;
+  } catch (err) {
+    updateLeadStatus(lead.id, 'error');
+    console.error('find-socials error:', err);
+    return {};
+  }
+}
+
+async function runFindSocials() {
+  const leads = STATE.leads.filter(l => l.website);
+  if (leads.length === 0) { toast('No leads with websites', true); return; }
+
+  showProgress('Finding social handles…', 0);
+
+  for (let i = 0; i < leads.length; i++) {
+    const lead = leads[i];
+    updateProgress(`Finding socials for ${lead.name || lead.website}…`, Math.round(i / leads.length * 100), `${i + 1} of ${leads.length}`);
+    await findSocialsForLead(lead);
+    await sleep(600);
+  }
+
+  updateProgress('Done!', 100, '');
+  await sleep(500);
+  hideProgress();
+
+  renderSocialsTab();
+  switchTab('socials');
+  updateStats();
+  toast(`Socials search complete — ${STATE.leads.filter(l => l.instagram || l.linkedin).length} found`);
+}
+
+function renderSocialsTab() {
+  if (!socialsList) return;
+  socialsList.innerHTML = '';
+  const withSocials = STATE.leads.filter(l => l.instagram || l.linkedin);
+  const withoutWebsite = STATE.leads.filter(l => !l.website);
+
+  if (withSocials.length === 0 && STATE.leads.length === 0) {
+    socialsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>No leads uploaded yet.</p></div>';
+    if (socialsActions) socialsActions.style.display = 'none';
+    return;
+  }
+
+  if (socialsActions) socialsActions.style.display = 'flex';
+
+  STATE.leads.forEach(lead => {
+    const card = document.createElement('div');
+    card.className = 'email-card';
+    const igHtml = lead.instagram
+      ? `<a href="https://instagram.com/${esc(lead.instagram)}" target="_blank">@${esc(lead.instagram)}</a>`
+      : `<button class="find-social-btn" data-leadid="${lead.id}" data-type="ig">🔍 Find IG</button>`;
+    const liHtml = lead.linkedin
+      ? `<a href="https://linkedin.com/company/${esc(lead.linkedin)}" target="_blank">${esc(lead.linkedin)}</a>`
+      : `<button class="find-social-btn" data-leadid="${lead.id}" data-type="li">🔍 Find LinkedIn</button>`;
+
+    card.innerHTML = `
+      <div class="email-card-header">
+        <div class="email-card-info">
+          <div class="email-card-name">${esc(lead.name || '—')}</div>
+          <div class="email-card-meta">${esc(trimUrl(lead.website || ''))}</div>
+        </div>
+        <div class="email-card-actions">
+          <button class="btn-ghost btn-sm refind-btn">🔍 Re-scan</button>
+        </div>
+      </div>
+      <div class="email-card-body open" style="display:flex;gap:2rem;padding:1.1rem 1.25rem">
+        <div><div class="issues-label">📸 Instagram</div><div>${igHtml}</div></div>
+        <div><div class="issues-label">🔗 LinkedIn</div><div>${liHtml}</div></div>
+      </div>
+    `;
+
+    card.querySelector('.refind-btn').addEventListener('click', async () => {
+      await findSocialsForLead(lead);
+      renderSocialsTab();
+    });
+    card.querySelectorAll('.find-social-btn').forEach(btn => {
+      btn.addEventListener('click', async () => { await findSocialsForLead(lead); renderSocialsTab(); });
+    });
+
+    socialsList.appendChild(card);
+  });
+}
+
+function exportSocialsCSV() {
+  const rows = ['Name,Email,Website,Instagram,LinkedIn'];
+  STATE.leads.forEach(l => {
+    rows.push([l.name, l.email, l.website, l.instagram || '', l.linkedin || ''].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(','));
+  });
+  download('socials.csv', rows.join('\n'));
+}
+
+// ── COLD DM GENERATION ────────────────────────────────────────
+async function runGenerateDMs() {
+  if (!STATE.apiKey) { toast('Please enter your Claude API key first', true); return; }
+
+  const selectedIds = Array.from(document.querySelectorAll('.lead-check:checked'))
+    .map(c => parseInt(c.dataset.id));
+  const leads = STATE.leads.filter(l => selectedIds.includes(l.id));
+  if (leads.length === 0) { toast('No leads selected', true); return; }
+
+  showProgress('Generating Cold DMs…', 0);
+  STATE.dms = [];
+  dmsList.innerHTML = '';
+
+  for (let i = 0; i < leads.length; i++) {
+    const lead = leads[i];
+    const pct = Math.round((i / leads.length) * 100);
+    updateProgress(`Generating DMs for ${lead.name || lead.website}…`, pct, `${i + 1} of ${leads.length}`);
+
+    try {
+      const result = await generateDMsForLead(lead);
+      STATE.dms.push({ lead, ...result });
+      renderDMCard({ lead, ...result });
+    } catch (err) {
+      console.error(err);
+      if (i === 0) toast('⚠ ' + err.message, true);
+    }
+    await sleep(700);
+  }
+
+  updateProgress('Done!', 100, '');
+  await sleep(500);
+  hideProgress();
+
+  if (STATE.dms.length > 0) {
+    if (dmsActions) dmsActions.style.display = 'flex';
+    switchTab('dms');
+    updateStats();
+    toast(`${STATE.dms.length} DM set${STATE.dms.length !== 1 ? 's' : ''} generated`);
+  }
+}
+
+async function generateDMsForLead(lead) {
+  const a = STATE.agency;
+  const agencyBlurb = [a.agencyName, a.tagline, a.website].filter(Boolean).join(' — ');
+  const websiteNote = lead.website ? `Their website: ${lead.website}` : 'No website provided.';
+  const igHandle = lead.instagram ? `Their Instagram: @${lead.instagram}` : '';
+  const liHandle = lead.linkedin  ? `Their LinkedIn: ${lead.linkedin}` : '';
+
+  const prompt = `You are writing two short cold outreach DMs for a web design agency. Agency: ${agencyBlurb || 'a professional web design agency'}.
+
+CLIENT:
+- Business: ${lead.name || 'Unknown'}
+- ${websiteNote}
+${igHandle}
+${liHandle}
+
+Write TWO DMs:
+
+1. INSTAGRAM DM — Casual, friendly, conversational. Max 150 characters. No hashtags. Sound human, not salesy. Should feel like a genuine compliment + quick pitch in 1-2 sentences. Start with their first name if available.
+
+2. LINKEDIN DM — Professional but warm. Max 300 characters. Mention you looked at their business. One specific observation + one clear offer. End with a soft CTA.
+
+Respond ONLY with valid JSON:
+{
+  "instagram_dm": "...",
+  "linkedin_dm": "..."
+}`;
+
+  const response = await callClaude(prompt);
+  const data = parseJSON(response);
+  return {
+    instagram_dm: data.instagram_dm || '',
+    linkedin_dm:  data.linkedin_dm  || '',
+  };
+}
+
+function renderDMCard(item) {
+  const noEmpty = dmsList.querySelector('.empty-state');
+  if (noEmpty) noEmpty.remove();
+
+  const card = document.createElement('div');
+  card.className = 'dm-card';
+  let activePlatform = 'ig';
+
+  const igIcon = item.lead.instagram ? `📸 @${esc(item.lead.instagram)}` : '📸 Instagram';
+  const liIcon = item.lead.linkedin  ? `🔗 ${esc(item.lead.linkedin)}`   : '🔗 LinkedIn';
+
+  card.innerHTML = `
+    <div class="dm-card-header">
+      <div>
+        <div class="dm-card-name">${esc(item.lead.name || 'Unknown')}</div>
+        <div class="dm-card-handles">
+          <span>${igIcon}</span>
+          <span>${liIcon}</span>
+        </div>
+      </div>
+      <div class="email-card-actions">
+        <button class="btn-primary btn-sm copy-dm-btn">Copy</button>
+      </div>
+    </div>
+    <div class="dm-card-body">
+      <div class="dm-platform-tabs">
+        <button class="dm-tab active" data-platform="ig">📸 Instagram</button>
+        <button class="dm-tab" data-platform="li">🔗 LinkedIn</button>
+      </div>
+      <div class="dm-text" id="dm-text-${item.lead.id || Date.now()}">${esc(item.instagram_dm)}</div>
+      <div class="dm-char-count" id="dm-chars-${item.lead.id || Date.now()}">${(item.instagram_dm||'').length} chars</div>
+    </div>
+  `;
+
+  const dmTextEl  = card.querySelector('.dm-text');
+  const dmCharsEl = card.querySelector('.dm-char-count');
+
+  card.querySelectorAll('.dm-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      card.querySelectorAll('.dm-tab').forEach(t => t.classList.toggle('active', t === tab));
+      activePlatform = tab.dataset.platform;
+      const text = activePlatform === 'ig' ? item.instagram_dm : item.linkedin_dm;
+      dmTextEl.textContent = text;
+      dmCharsEl.textContent = `${(text||'').length} chars`;
+    });
+  });
+
+  card.querySelector('.copy-dm-btn').addEventListener('click', () => {
+    const text = activePlatform === 'ig' ? item.instagram_dm : item.linkedin_dm;
+    navigator.clipboard.writeText(text).then(() => toast('DM copied!'));
+  });
+
+  dmsList.appendChild(card);
+}
+
+function exportAllDMs() {
+  if (!STATE.dms.length) return;
+  const text = STATE.dms.map(d =>
+    `=== ${d.lead.name} (${d.lead.email || '—'}) ===\n` +
+    `Instagram (@${d.lead.instagram || '?'}): ${d.instagram_dm}\n\n` +
+    `LinkedIn (${d.lead.linkedin || '?'}): ${d.linkedin_dm}\n` +
+    '─'.repeat(60) + '\n'
+  ).join('\n');
+  download('dms.txt', text);
+}
+
+function copyAllDMsText() {
+  const text = STATE.dms.map(d =>
+    `[${d.lead.name}]\nIG: ${d.instagram_dm}\nLI: ${d.linkedin_dm}`
+  ).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => toast('All DMs copied!'));
 }

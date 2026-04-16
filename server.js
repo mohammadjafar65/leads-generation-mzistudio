@@ -53,8 +53,38 @@ async function appendToSent(smtpUser, smtpPassword, mailOptions) {
 
 
 const path   = require('path');
+const https  = require('https');
+const http   = require('http');
 
 const session = require('express-session');
+
+// ── SOCIAL HANDLE SCRAPER ─────────────────────────────────────
+function fetchWebsiteHtml(rawUrl) {
+  return new Promise((resolve, reject) => {
+    let url;
+    try { url = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl; } catch { return reject(new Error('Invalid URL')); }
+    const lib = url.startsWith('https') ? https : http;
+    const req = lib.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,*/*',
+      },
+      timeout: 8000,
+    }, (res) => {
+      // Follow one redirect
+      if ([301,302,303,307,308].includes(res.statusCode) && res.headers.location) {
+        return fetchWebsiteHtml(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode && res.statusCode >= 400) return resolve('');
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { if (data.length < 500_000) data += chunk; });
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -127,6 +157,46 @@ app.get(`${BASE}/`, (_req, res) => res.sendFile(path.join(__dirname, 'index.html
 
 // ── HEALTH CHECK ──────────────────────────────────────────────
 app.get(`${BASE}/health`, (_req, res) => res.json({ ok: true }));
+
+// ── FIND SOCIAL HANDLES FROM WEBSITE ─────────────────────────
+app.post(`${BASE}/find-socials`, requireAuth, async (req, res) => {
+  const { website } = req.body;
+  if (!website) return res.status(400).json({ error: 'website required' });
+
+  try {
+    const html = await fetchWebsiteHtml(website);
+
+    // Instagram: look for instagram.com/<handle> — exclude common non-handle paths
+    const SKIP_IG = new Set(['p', 'reel', 'stories', 'explore', 'accounts', 'direct', 'tv', 'tags', 'locations', 'share', 'sharedAction', '']);
+    let instagram = null;
+    const igRe = /instagram\.com\/([A-Za-z0-9_.]{1,30})\/?(?:[?#"' ]|$)/gi;
+    let m;
+    while ((m = igRe.exec(html)) !== null) {
+      const handle = m[1].toLowerCase();
+      if (!SKIP_IG.has(handle) && !handle.startsWith('_')) {
+        instagram = m[1];
+        break;
+      }
+    }
+
+    // LinkedIn: company or personal profile
+    const SKIP_LI = new Set(['sharing', 'shareArticle', 'login', 'feed', 'jobs', 'learning', 'pulse', 'groups', 'messaging', 'notifications', '']);
+    let linkedin = null;
+    const liRe = /linkedin\.com\/(company|in)\/([A-Za-z0-9_.-]{1,100})\/?(?:[?#"' ]|$)/gi;
+    while ((m = liRe.exec(html)) !== null) {
+      const handle = m[2];
+      if (!SKIP_LI.has(handle.toLowerCase())) {
+        linkedin = handle;
+        break;
+      }
+    }
+
+    res.json({ instagram, linkedin });
+  } catch (err) {
+    console.error('find-socials error:', err.message);
+    res.json({ instagram: null, linkedin: null });
+  }
+});
 
 // ── SEND SINGLE EMAIL ─────────────────────────────────────────
 app.post(`${BASE}/send`, requireAuth, async (req, res) => {

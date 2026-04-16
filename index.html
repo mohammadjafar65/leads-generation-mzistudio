@@ -3,52 +3,134 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeadMail — AI Email Generator</title>
+  <title>LeadMail — Outreach Platform</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header>
-    <div class="logo">LeadMail</div>
-    <nav>
-      <button class="tab-btn active" data-tab="upload">Upload Leads</button>
-      <button class="tab-btn" data-tab="generate">Generate Emails</button>
-      <button class="tab-btn" data-tab="followup">Follow-ups</button>
-      <button class="tab-btn" data-tab="send">Send Emails</button>
-      <button class="tab-btn" data-tab="history">History</button>
-      <button class="tab-btn" data-tab="settings">Settings</button>
-        <button id="logoutBtn" class="btn-ghost" style="margin-left:2rem;display:none">Logout</button>
-    </nav>
-  </header>
-
-  <main>
-
-    <!-- TAB: UPLOAD -->
-    <section id="tab-upload" class="tab-section active">
-      <div class="section-title">
-        <h1>Upload Client Leads</h1>
-        <p>Upload a CSV with columns: <code>name, email, phone, website</code></p>
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">
+        LeadMail <span class="sidebar-logo-badge">Pro</span>
       </div>
+    </div>
 
-      <div class="upload-area" id="dropZone">
-        <input type="file" id="csvFile" accept=".csv" hidden />
-        <div class="upload-icon">↑</div>
-        <p>Drop CSV here or <span class="link" id="browseBtn">browse</span></p>
-        <p class="hint">Expects: name, email, phone, website</p>
-      </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Outreach</div>
+      <button class="nav-item tab-btn active" data-tab="upload">
+        <span class="nav-icon">👥</span> Leads
+        <span class="nav-badge" id="navBadgeLeads" style="display:none">0</span>
+      </button>
+      <button class="nav-item tab-btn" data-tab="generate">
+        <span class="nav-icon">✉</span> Generate Emails
+        <span class="nav-badge" id="navBadgeEmails" style="display:none">0</span>
+      </button>
+      <button class="nav-item tab-btn" data-tab="followup">
+        <span class="nav-icon">🔄</span> Follow-ups
+      </button>
+      <button class="nav-item tab-btn" data-tab="socials">
+        <span class="nav-icon">🔍</span> Social Handles
+      </button>
+      <button class="nav-item tab-btn" data-tab="dms">
+        <span class="nav-icon">💬</span> Cold DMs
+        <span class="nav-badge" id="navBadgeDMs" style="display:none">0</span>
+      </button>
 
-      <div id="leadsTable" class="table-wrap hidden">
-        <div class="table-header">
-          <span id="leadCount">0 leads loaded</span>
-          <button id="addLeadBtn" class="btn-primary" style="margin-right:1rem">+ Add Lead</button>
-          <button id="clearLeads" class="btn-ghost">Clear</button>
+      <hr class="sidebar-divider" />
+      <div class="sidebar-label">Sending</div>
+      <button class="nav-item tab-btn" data-tab="send">
+        <span class="nav-icon">📤</span> Send Emails
+      </button>
+      <button class="nav-item tab-btn" data-tab="history">
+        <span class="nav-icon">📋</span> History
+      </button>
+
+      <hr class="sidebar-divider" />
+      <div class="sidebar-label">Config</div>
+      <button class="nav-item tab-btn" data-tab="settings">
+        <span class="nav-icon">⚙</span> Settings
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <button id="logoutBtn" class="btn-ghost btn-sm" style="width:100%;display:none">↩ Logout</button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ PAGE WRAPPER ═══════════════ -->
+  <div id="page-wrapper">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">Leads</div>
+      <div class="topbar-actions" id="topbarActions"></div>
+    </div>
+
+    <!-- MAIN -->
+    <main>
+
+      <!-- ─── TAB: LEADS (upload) ─── -->
+      <section id="tab-upload" class="tab-section active">
+        <div class="stats-row" id="statsRow">
+          <div class="stat-card">
+            <div class="stat-icon indigo">👥</div>
+            <div class="stat-body">
+              <div class="stat-value" id="statLeads">0</div>
+              <div class="stat-label">Total Leads</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">✉</div>
+            <div class="stat-body">
+              <div class="stat-value" id="statEmails">0</div>
+              <div class="stat-label">Emails Generated</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber">🔍</div>
+            <div class="stat-body">
+              <div class="stat-value" id="statSocials">0</div>
+              <div class="stat-label">Socials Found</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">💬</div>
+            <div class="stat-body">
+              <div class="stat-value" id="statDMs">0</div>
+              <div class="stat-label">DMs Generated</div>
+            </div>
+          </div>
         </div>
+
+        <div class="section-title">
+          <h1>Upload Client Leads</h1>
+          <p>Upload a CSV with columns: <code>name, email, phone, website</code></p>
+        </div>
+
+        <div class="upload-area" id="dropZone">
+          <input type="file" id="csvFile" accept=".csv" hidden />
+          <div class="upload-icon">☁</div>
+          <p>Drop CSV here or <span class="link" id="browseBtn">browse files</span></p>
+          <p class="hint" style="margin-top:0.5rem">Expects columns: name, email, phone, website</p>
+        </div>
+
+        <div id="leadsTable" class="table-wrap hidden">
+          <div class="table-header">
+            <span id="leadCount">0 leads loaded</span>
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <button id="findAllSocialsBtn" class="btn-ghost btn-sm">🔍 Find All Socials</button>
+              <button id="addLeadBtn" class="btn-primary btn-sm">+ Add Lead</button>
+              <button id="clearLeads" class="btn-ghost btn-sm">Clear</button>
+            </div>
+          </div>
+
           <!-- ADD LEAD MODAL -->
           <div id="addLeadModal" class="overlay hidden">
-            <div class="modal" style="max-width:400px;">
+            <div class="modal" style="max-width:420px;">
               <div class="modal-header">
                 <h2>Add Lead</h2>
+                <button id="cancelAddLead" class="close-btn">✕</button>
               </div>
               <form id="addLeadForm" class="modal-body" autocomplete="off">
                 <label for="addLeadName">Name</label>
@@ -59,195 +141,267 @@
                 <input type="text" id="addLeadPhone" name="phone" class="modal-input" />
                 <label for="addLeadWebsite">Website</label>
                 <input type="text" id="addLeadWebsite" name="website" class="modal-input" />
-                <button type="submit" class="btn-primary" style="margin-top:1.2rem">Add Lead</button>
-                <button type="button" id="cancelAddLead" class="btn-ghost" style="margin-left:1rem">Cancel</button>
-                <p id="addLeadError" class="hint" style="color:#a02020;display:none;margin-top:0.7rem"></p>
+                <div class="modal-footer" style="border-top:none;padding:0;background:none;margin-top:0.5rem">
+                  <button type="submit" class="btn-primary">Add Lead</button>
+                  <button type="button" id="cancelAddLeadInner" class="btn-ghost">Cancel</button>
+                </div>
+                <p id="addLeadError" class="hint" style="color:var(--danger);display:none;margin-top:0.5rem"></p>
               </form>
             </div>
           </div>
-        <table>
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="selectAll" /></th>
-              <th>#</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Website</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="leadsBody"></tbody>
-        </table>
-      </div>
 
-      <div id="uploadActions" class="actions hidden">
-        <button id="analyzeBtn" class="btn-primary">Analyse Websites &amp; Generate Emails</button>
-        <span class="hint" id="selectedCount">Select leads above to continue</span>
-      </div>
-    </section>
+          <table>
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll" /></th>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Website</th>
+                <th>Instagram</th>
+                <th>LinkedIn</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="leadsBody"></tbody>
+          </table>
+        </div>
 
-    <!-- TAB: GENERATE -->
-    <section id="tab-generate" class="tab-section">
-      <div class="section-title">
-        <h1>Generated Emails</h1>
-        <p>Personalized emails based on website analysis</p>
-      </div>
+        <div id="uploadActions" class="actions hidden">
+          <button id="analyzeBtn" class="btn-primary">✉ Analyse &amp; Generate Emails</button>
+          <button id="generateDMsBtn" class="btn-ghost">💬 Generate Cold DMs</button>
+          <span class="hint" id="selectedCount">Select leads above to continue</span>
+        </div>
+      </section>
 
-      <div id="emailsList" class="emails-list">
-        <div class="empty-state">No emails generated yet. Upload leads and click "Analyse Websites".</div>
-      </div>
+      <!-- ─── TAB: GENERATE EMAILS ─── -->
+      <section id="tab-generate" class="tab-section">
+        <div class="section-title">
+          <h1>Generated Emails</h1>
+          <p>Personalized cold emails based on website analysis</p>
+        </div>
 
-      <div class="actions" id="emailActions" style="display:none">
-        <button id="exportEmails" class="btn-primary">Export All as TXT</button>
-        <button id="copyAll" class="btn-ghost">Copy All</button>
-        <button id="sendAllEmails" class="btn-send">✉ Send All Emails</button>
-      </div>
-    </section>
-
-    <!-- TAB: FOLLOWUP -->
-    <section id="tab-followup" class="tab-section">
-      <div class="section-title">
-        <h1>Follow-up Emails</h1>
-        <p>Generate follow-up sequences for leads that haven't responded</p>
-      </div>
-
-      <div id="followupList" class="emails-list">
-        <div class="empty-state">No follow-ups generated. Generate initial emails first.</div>
-      </div>
-
-      <div class="actions" id="followupActions" style="display:none">
-        <button id="generateFollowups" class="btn-primary">Generate Follow-ups</button>
-        <button id="exportFollowups" class="btn-ghost">Export Follow-ups</button>
-      </div>
-    </section>
-
-    <!-- TAB: SEND -->
-    <section id="tab-send" class="tab-section">
-      <div class="section-title">
-        <h1>Send Emails</h1>
-        <p>Send generated emails directly to leads via your SMTP account (hello@mzistudio.com)</p>
-      </div>
-
-      <div id="sendServerStatus" class="smtp-server-status"></div>
-
-      <div id="sendList" class="emails-list">
-        <div class="empty-state">No emails to send. Generate emails first, then come here.</div>
-      </div>
-
-      <div class="actions" id="sendActions" style="display:none">
-        <button id="sendAllBtn" class="btn-send">✉ Send All</button>
-        <button id="sendSelectedBtn" class="btn-ghost">Send Selected</button>
-        <span class="hint" id="sendStatusText"></span>
-      </div>
-    </section>
-
-    <!-- TAB: HISTORY -->
-    <section id="tab-history" class="tab-section">
-      <div class="section-title">
-        <h1>History</h1>
-        <p>Previously generated lead batches — click any batch to reload its emails</p>
-      </div>
-
-      <div id="historyList" class="history-list">
-        <div class="empty-state">No history yet. Generate emails to start building history.</div>
-      </div>
-
-      <div class="actions" id="historyActions" style="display:none">
-        <button id="clearHistory" class="btn-ghost">Clear All History</button>
-      </div>
-    </section>
-
-    <!-- TAB: SETTINGS -->
-    <section id="tab-settings" class="tab-section">
-      <div class="section-title">
-        <h1>Settings</h1>
-        <p>Configure your agency details, Claude API key, and SMTP email settings</p>
-      </div>
-
-      <div class="settings-card">
-
-        <!-- API KEY -->
-        <div class="settings-section-label">Claude API Key</div>
-        <div class="settings-group">
-          <label for="apiKeyInput">API Key</label>
-          <div class="api-input-row">
-            <input type="password" id="apiKeyInput" class="settings-input" placeholder="sk-ant-api03-…" />
-            <button id="saveKey" class="btn-primary">Save</button>
+        <div id="emailsList" class="emails-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">✉</div>
+            <p>No emails generated yet.</p>
+            <p>Upload leads and click "Analyse &amp; Generate Emails".</p>
           </div>
-          <p class="hint" style="margin-top:0.4rem">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys</p>
         </div>
 
-        <div class="settings-divider"></div>
+        <div class="actions" id="emailActions" style="display:none">
+          <button id="exportEmails" class="btn-primary">Export All (.txt)</button>
+          <button id="copyAll" class="btn-ghost">Copy All</button>
+          <button id="sendAllEmails" class="btn-send">📤 Send All Emails</button>
+        </div>
+      </section>
 
-        <!-- AGENCY DETAILS -->
-        <div class="settings-section-label">Agency Details</div>
-        <div class="settings-group">
-          <label for="agentName">Your Name</label>
-          <input type="text" id="agentName" class="settings-input" placeholder="e.g. Rahul Sharma" />
-        </div>
-        <div class="settings-group">
-          <label for="agencyName">Agency Name</label>
-          <input type="text" id="agencyName" class="settings-input" placeholder="e.g. Pixel Studio" />
-        </div>
-        <div class="settings-group">
-          <label for="agencyWebsite">Agency Website</label>
-          <input type="url" id="agencyWebsite" class="settings-input" placeholder="e.g. https://pixelstudio.com" />
-        </div>
-        <div class="settings-group">
-          <label for="agencyPhone">Phone Number</label>
-          <input type="text" id="agencyPhone" class="settings-input" placeholder="e.g. +91 98765 43210" />
-        </div>
-        <div class="settings-group">
-          <label for="agencyCallLink">Book a Call Link</label>
-          <input type="url" id="agencyCallLink" class="settings-input" placeholder="e.g. https://cal.com/yourname" />
-        </div>
-        <div class="settings-group">
-          <label for="agencyTagline">Agency Tagline <span class="label-optional">(optional)</span></label>
-          <input type="text" id="agencyTagline" class="settings-input" placeholder="e.g. We build websites that convert" />
+      <!-- ─── TAB: FOLLOW-UPS ─── -->
+      <section id="tab-followup" class="tab-section">
+        <div class="section-title">
+          <h1>Follow-up Emails</h1>
+          <p>Generate follow-up sequences for leads that haven't responded</p>
         </div>
 
-        <div class="settings-actions">
-          <button id="saveSettings" class="btn-primary">Save Settings</button>
-          <span class="settings-status hidden" id="settingsStatus">✓ Saved</span>
-        </div>
-        <div class="settings-preview" id="settingsPreview"></div>
-
-        <div class="settings-divider"></div>
-
-        <!-- SMTP SETTINGS -->
-        <div class="settings-section-label">SMTP Email Sending</div>
-        <div class="smtp-info-box">
-          <div class="smtp-info-row"><span>Host</span><code>mzistudio.com</code></div>
-          <div class="smtp-info-row"><span>Port</span><code>465 (SSL/TLS)</code></div>
-          <div class="smtp-info-row"><span>Username</span><code>hello@mzistudio.com</code></div>
-        </div>
-        <div class="settings-group" style="margin-top:1rem">
-          <label for="smtpFromInput">From Name <span class="label-optional">(optional)</span></label>
-          <input type="text" id="smtpFromInput" class="settings-input" placeholder="e.g. Mansu — MZI Studio" />
-        </div>
-        <div class="settings-group">
-          <label for="smtpPasswordInput">Email Password</label>
-          <div class="api-input-row">
-            <input type="password" id="smtpPasswordInput" class="settings-input" placeholder="Your hello@mzistudio.com password" />
-            <button id="saveSmtp" class="btn-primary">Save</button>
+        <div id="followupList" class="emails-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔄</div>
+            <p>No follow-ups generated.</p>
+            <p>Generate initial emails first, then come here.</p>
           </div>
-          <p class="hint" style="margin-top:0.4rem">Password is stored locally in your browser only — never sent to any third party.</p>
         </div>
-        <div class="settings-group">
-          <button id="testSmtp" class="btn-ghost">Test Connection</button>
-          <span class="settings-status hidden" id="smtpTestStatus">✓ Connected</span>
+
+        <div class="actions" id="followupActions" style="display:none">
+          <button id="generateFollowups" class="btn-primary">Generate Follow-ups</button>
+          <button id="exportFollowups" class="btn-ghost">Export Follow-ups</button>
         </div>
-      </div>
-    </section>
+      </section>
 
-  </main>
+      <!-- ─── TAB: SOCIAL HANDLES ─── -->
+      <section id="tab-socials" class="tab-section">
+        <div class="section-title">
+          <h1>Social Handle Finder</h1>
+          <p>Automatically find Instagram and LinkedIn profiles by scanning business websites</p>
+        </div>
 
-  <!-- PROGRESS OVERLAY -->
+        <div id="socialsList" class="emails-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <p>No social handles found yet.</p>
+            <p>Upload leads and click "Find All Socials" or use the 🔍 button per lead.</p>
+          </div>
+        </div>
+
+        <div class="actions" id="socialsActions" style="display:none">
+          <button id="findAllSocialsBtn2" class="btn-primary">🔍 Find All Socials</button>
+          <button id="exportSocials" class="btn-ghost">Export Socials (.csv)</button>
+        </div>
+      </section>
+
+      <!-- ─── TAB: COLD DMs ─── -->
+      <section id="tab-dms" class="tab-section">
+        <div class="section-title">
+          <h1>Cold DMs</h1>
+          <p>AI-generated Instagram and LinkedIn direct messages for each lead</p>
+        </div>
+
+        <div id="dmsList" class="emails-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">💬</div>
+            <p>No DMs generated yet.</p>
+            <p>Select leads and click "Generate Cold DMs".</p>
+          </div>
+        </div>
+
+        <div class="actions" id="dmsActions" style="display:none">
+          <button id="exportDMs" class="btn-primary">Export DMs (.txt)</button>
+          <button id="copyAllDMs" class="btn-ghost">Copy All</button>
+        </div>
+      </section>
+
+      <!-- ─── TAB: SEND ─── -->
+      <section id="tab-send" class="tab-section">
+        <div class="section-title">
+          <h1>Send Emails</h1>
+          <p>Send generated emails directly to leads via your SMTP account</p>
+        </div>
+
+        <div id="sendServerStatus" class="smtp-server-status"></div>
+
+        <div id="sendList" class="emails-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">📤</div>
+            <p>No emails to send.</p>
+            <p>Generate emails first, then come here.</p>
+          </div>
+        </div>
+
+        <div class="actions" id="sendActions" style="display:none">
+          <button id="sendAllBtn" class="btn-send">📤 Send All</button>
+          <button id="sendSelectedBtn" class="btn-ghost">Send Selected</button>
+          <span class="hint" id="sendStatusText"></span>
+        </div>
+      </section>
+
+      <!-- ─── TAB: HISTORY ─── -->
+      <section id="tab-history" class="tab-section">
+        <div class="section-title">
+          <h1>History</h1>
+          <p>Previously generated lead batches — click any batch to reload its emails</p>
+        </div>
+
+        <div id="historyList" class="history-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>No history yet.</p>
+            <p>Generate emails to start building history.</p>
+          </div>
+        </div>
+
+        <div class="actions" id="historyActions" style="display:none">
+          <button id="clearHistory" class="btn-ghost btn-danger" style="background:none;color:var(--danger);border-color:var(--danger)">Clear All History</button>
+        </div>
+      </section>
+
+      <!-- ─── TAB: SETTINGS ─── -->
+      <section id="tab-settings" class="tab-section">
+        <div class="section-title">
+          <h1>Settings</h1>
+          <p>Configure your API key, agency details, and email settings</p>
+        </div>
+
+        <div class="settings-grid">
+
+          <!-- LEFT COL -->
+          <div>
+            <!-- API KEY -->
+            <div class="settings-card" style="margin-bottom:1.5rem">
+              <div class="settings-card-title">🔑 Claude API Key</div>
+              <div class="settings-group">
+                <label for="apiKeyInput">API Key</label>
+                <div class="api-input-row">
+                  <input type="password" id="apiKeyInput" class="settings-input" placeholder="sk-ant-api03-…" />
+                  <button id="saveKey" class="btn-primary">Save</button>
+                </div>
+                <p class="hint" style="margin-top:0.5rem">Get your key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></p>
+              </div>
+            </div>
+
+            <!-- AGENCY DETAILS -->
+            <div class="settings-card">
+              <div class="settings-card-title">🏢 Agency Details</div>
+              <div class="settings-group">
+                <label for="agentName">Your Name</label>
+                <input type="text" id="agentName" class="settings-input" placeholder="e.g. Rahul Sharma" />
+              </div>
+              <div class="settings-group">
+                <label for="agencyName">Agency Name</label>
+                <input type="text" id="agencyName" class="settings-input" placeholder="e.g. MZI Studio" />
+              </div>
+              <div class="settings-group">
+                <label for="agencyWebsite">Agency Website</label>
+                <input type="url" id="agencyWebsite" class="settings-input" placeholder="https://mzistudio.com" />
+              </div>
+              <div class="settings-group">
+                <label for="agencyPhone">Phone Number</label>
+                <input type="text" id="agencyPhone" class="settings-input" placeholder="+91 98765 43210" />
+              </div>
+              <div class="settings-group">
+                <label for="agencyCallLink">Book a Call Link</label>
+                <input type="url" id="agencyCallLink" class="settings-input" placeholder="https://cal.com/yourname" />
+              </div>
+              <div class="settings-group">
+                <label for="agencyTagline">Tagline <span class="label-optional">(optional)</span></label>
+                <input type="text" id="agencyTagline" class="settings-input" placeholder="We build websites that convert" />
+              </div>
+              <div class="settings-actions">
+                <button id="saveSettings" class="btn-primary">Save Settings</button>
+                <span class="settings-status hidden" id="settingsStatus">✓ Saved</span>
+              </div>
+              <div class="settings-preview" id="settingsPreview"></div>
+            </div>
+          </div>
+
+          <!-- RIGHT COL -->
+          <div class="settings-card">
+            <div class="settings-card-title">📧 SMTP Email Sending</div>
+            <div class="smtp-info-box">
+              <div class="smtp-info-row"><span>Host</span><code>mzistudio.com</code></div>
+              <div class="smtp-info-row"><span>Port</span><code>465 (SSL/TLS)</code></div>
+              <div class="smtp-info-row"><span>User</span><code>hello@mzistudio.com</code></div>
+            </div>
+            <div class="settings-group">
+              <label for="smtpFromInput">From Name <span class="label-optional">(optional)</span></label>
+              <input type="text" id="smtpFromInput" class="settings-input" placeholder="Mansu — MZI Studio" />
+            </div>
+            <div class="settings-group">
+              <label for="smtpPasswordInput">Email Password</label>
+              <div class="api-input-row">
+                <input type="password" id="smtpPasswordInput" class="settings-input" placeholder="hello@mzistudio.com password" />
+                <button id="saveSmtp" class="btn-primary">Save</button>
+              </div>
+              <p class="hint" style="margin-top:0.5rem">Stored locally in your browser only.</p>
+            </div>
+            <div class="settings-group">
+              <button id="testSmtp" class="btn-ghost">Test Connection</button>
+              <span class="settings-status hidden" id="smtpTestStatus">✓ Connected</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /page-wrapper -->
+
+  <!-- ═══════════════ OVERLAYS & MODALS ═══════════════ -->
+
+  <!-- PROGRESS -->
   <div id="progressOverlay" class="overlay hidden">
     <div class="progress-box">
       <div class="spinner"></div>
-      <p id="progressText">Analysing websites…</p>
+      <p id="progressText">Working…</p>
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="progressBar"></div>
       </div>
@@ -270,44 +424,49 @@
         <textarea id="modalBody" class="modal-textarea"></textarea>
       </div>
       <div class="modal-footer">
-        <button id="sendEmailModal" class="btn-send">✉ Send Email</button>
+        <button id="sendEmailModal" class="btn-send">📤 Send Email</button>
         <button id="copyEmail" class="btn-primary">Copy Email</button>
         <button id="modalClose2" class="btn-ghost">Close</button>
       </div>
     </div>
   </div>
 
+  <!-- EDIT EMAIL MODAL -->
+  <div id="editEmailModal" class="overlay hidden">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h2>Edit Email Address</h2>
+        <button id="cancelEditEmail" class="close-btn">✕</button>
+      </div>
+      <form id="editEmailForm" class="modal-body" autocomplete="off">
+        <label for="editLeadEmail">Email Address</label>
+        <input type="email" id="editLeadEmail" class="modal-input" required />
+        <div class="modal-footer" style="border-top:none;padding:0;background:none">
+          <button type="submit" class="btn-primary">Update</button>
+          <button type="button" id="cancelEditEmailInner" class="btn-ghost">Cancel</button>
+        </div>
+        <p id="editEmailError" class="hint" style="color:var(--danger);display:none;margin-top:0.5rem"></p>
+      </form>
+    </div>
+  </div>
+
   <!-- LOGIN MODAL -->
   <div id="loginModal" class="overlay">
-    <div class="modal" style="max-width:400px;">
+    <div class="modal" style="max-width:420px;">
       <div class="modal-header">
-        <h2>Login</h2>
+        <h2>Sign In to LeadMail</h2>
       </div>
       <form id="loginForm" class="modal-body" autocomplete="off">
         <label for="loginUsername">Username</label>
         <input type="text" id="loginUsername" name="username" class="modal-input" required autofocus autocomplete="username" />
         <label for="loginPassword">Password</label>
         <input type="password" id="loginPassword" name="password" class="modal-input" required autocomplete="current-password" />
-        <button type="submit" class="btn-primary" style="margin-top:1.2rem">Login</button>
-        <p id="loginError" class="hint" style="color:#a02020;display:none;margin-top:0.7rem"></p>
+        <button type="submit" class="btn-primary" style="margin-top:0.5rem">Sign In</button>
+        <p id="loginError" style="color:var(--danger);font-size:0.82rem;display:none;margin-top:0.5rem"></p>
       </form>
     </div>
   </div>
+
   <script src="app.js"></script>
-  <!-- EDIT EMAIL MODAL -->
-  <div id="editEmailModal" class="overlay hidden">
-    <div class="modal" style="max-width:400px;">
-      <div class="modal-header">
-        <h2>Edit Lead Email</h2>
-      </div>
-      <form id="editEmailForm" class="modal-body" autocomplete="off">
-        <label for="editLeadEmail">Email</label>
-        <input type="email" id="editLeadEmail" name="email" class="modal-input" required />
-        <button type="submit" class="btn-primary" style="margin-top:1.2rem">Save</button>
-        <button type="button" id="cancelEditEmail" class="btn-ghost" style="margin-left:1rem">Cancel</button>
-        <p id="editEmailError" class="hint" style="color:#a02020;display:none;margin-top:0.7rem"></p>
-      </form>
-    </div>
-  </div>
 </body>
 </html>
