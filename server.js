@@ -202,7 +202,7 @@ app.use(cors({
       'https://mzistudio.com',
       'http://mzistudio.com',
     ];
-    if (!origin || allowed.some(o => origin.startsWith(o))) return cb(null, true);
+    if (!origin || allowed.some(o => origin.startsWith(o))) return cb(null, origin || true);
     cb(new Error('Not allowed by CORS: ' + origin));
   },
   credentials: true
