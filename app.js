@@ -129,6 +129,11 @@ const exportDMs        = $('exportDMs');
 const copyAllDMs       = $('copyAllDMs');
 const sendAllIGDMs     = $('sendAllIGDMs');
 const sendAllLIDMs     = $('sendAllLIDMs');
+const dmBatchSettings  = $('dmBatchSettings');
+const dmBatchSize      = $('dmBatchSize');
+const dmBatchBreak     = $('dmBatchBreak');
+const dmDmDelay        = $('dmDmDelay');
+const toggleBatchBtn   = $('toggleBatchSettings');
 // Social credentials settings
 const igUsernameInput  = $('igUsernameInput');
 const igPasswordInput  = $('igPasswordInput');
@@ -356,6 +361,12 @@ function bindEvents() {
   if (copyAllDMs) copyAllDMs.addEventListener('click', copyAllDMsText);
   if (sendAllIGDMs) sendAllIGDMs.addEventListener('click', () => runSendAllDMs('instagram'));
   if (sendAllLIDMs) sendAllLIDMs.addEventListener('click', () => runSendAllDMs('linkedin'));
+  if (toggleBatchBtn) toggleBatchBtn.addEventListener('click', () => {
+    if (!dmBatchSettings) return;
+    const visible = dmBatchSettings.style.display !== 'none';
+    dmBatchSettings.style.display = visible ? 'none' : 'block';
+    toggleBatchBtn.textContent = visible ? '⚙ Batch Settings' : '✕ Close Settings';
+  });
   if (saveSocialCreds) saveSocialCreds.addEventListener('click', saveSocialCredentials);
 
   // SMTP
@@ -1810,19 +1821,24 @@ function renderDMCard(item) {
       const creds = STATE.socialCreds;
       if (!creds.igUsername || !creds.igPassword) { toast('Add Instagram credentials in Settings first.', 'error'); switchTab('settings'); return; }
       sendIGBtn.disabled = true; sendIGBtn.textContent = '⏳ Sending…';
-      const badge = document.getElementById(igBadgeId);
+      const badge = card.querySelector(`[id^="dm-send-badge-instagram-"]`);
       try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 120000); // 2min timeout
         const resp = await fetch(`${BASE}/send-instagram-dm`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ igUsername: creds.igUsername, igPassword: creds.igPassword, recipientHandle: igHandle, message: item.instagram_dm }),
+          signal: ctrl.signal,
         });
+        clearTimeout(timer);
         const data = await resp.json();
         if (!resp.ok || data.error) throw new Error(data.error || 'Failed');
         if (badge) { badge.textContent = '✓ IG Sent'; badge.className = 'dm-send-badge sent'; }
         sendIGBtn.textContent = '✓ Sent'; toast(`IG DM sent to @${igHandle}`);
       } catch (err) {
-        if (badge) { badge.textContent = `✗ ${err.message}`; badge.className = 'dm-send-badge failed'; }
-        sendIGBtn.disabled = false; sendIGBtn.textContent = '📤 IG'; toast(`IG DM failed: ${err.message}`, 'error');
+        const msg = err.name === 'AbortError' ? 'Timed out after 2 minutes' : err.message;
+        if (badge) { badge.textContent = `✗ ${msg}`; badge.className = 'dm-send-badge failed'; }
+        sendIGBtn.disabled = false; sendIGBtn.textContent = '📤 IG'; toast(`IG DM failed: ${msg}`, true);
       }
     });
   }
@@ -1833,19 +1849,24 @@ function renderDMCard(item) {
       const creds = STATE.socialCreds;
       if (!creds.liEmail || !creds.liPassword) { toast('Add LinkedIn credentials in Settings first.', 'error'); switchTab('settings'); return; }
       sendLIBtn.disabled = true; sendLIBtn.textContent = '⏳ Sending…';
-      const badge = document.getElementById(liBadgeId);
+      const badge = card.querySelector(`[id^="dm-send-badge-linkedin-"]`);
       try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 120000);
         const resp = await fetch(`${BASE}/send-linkedin-dm`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ liEmail: creds.liEmail, liPassword: creds.liPassword, recipientHandle: liHandle, message: item.linkedin_dm }),
+          signal: ctrl.signal,
         });
+        clearTimeout(timer);
         const data = await resp.json();
         if (!resp.ok || data.error) throw new Error(data.error || 'Failed');
         if (badge) { badge.textContent = '✓ LI Sent'; badge.className = 'dm-send-badge sent'; }
         sendLIBtn.textContent = '✓ Sent'; toast(`LI DM sent to ${liHandle}`);
       } catch (err) {
-        if (badge) { badge.textContent = `✗ ${err.message}`; badge.className = 'dm-send-badge failed'; }
-        sendLIBtn.disabled = false; sendLIBtn.textContent = '📤 LI'; toast(`LI DM failed: ${err.message}`, 'error');
+        const msg = err.name === 'AbortError' ? 'Timed out after 2 minutes' : err.message;
+        if (badge) { badge.textContent = `✗ ${msg}`; badge.className = 'dm-send-badge failed'; }
+        sendLIBtn.disabled = false; sendLIBtn.textContent = '📤 LI'; toast(`LI DM failed: ${msg}`, true);
       }
     });
   }
@@ -1900,22 +1921,22 @@ function loadSocialCredentials() {
   } catch (e) { /* ignore */ }
 }
 
-// ── SEND ALL DMs ──────────────────────────────────────────────
+// ── SEND ALL DMs (with batching) ──────────────────────────────
 async function runSendAllDMs(platform) {
   if (!STATE.dms.length) { toast('No DMs generated yet.'); return; }
 
   const creds = STATE.socialCreds;
   if (platform === 'instagram' && (!creds.igUsername || !creds.igPassword)) {
-    toast('Please save your Instagram credentials in Settings first.', 'error');
+    toast('Please save your Instagram credentials in Settings first.', true);
     switchTab('settings'); return;
   }
   if (platform === 'linkedin' && (!creds.liEmail || !creds.liPassword)) {
-    toast('Please save your LinkedIn credentials in Settings first.', 'error');
+    toast('Please save your LinkedIn credentials in Settings first.', true);
     switchTab('settings'); return;
   }
 
   const platformLabel = platform === 'instagram' ? 'Instagram' : 'LinkedIn';
-  const dmKey = platform === 'instagram' ? 'instagram_dm' : 'linkedin_dm';
+  const dmKey    = platform === 'instagram' ? 'instagram_dm' : 'linkedin_dm';
   const handleKey = platform === 'instagram' ? 'instagram' : 'linkedin';
 
   const eligible = STATE.dms.filter(d => d.lead[handleKey] && d[dmKey]);
@@ -1924,54 +1945,116 @@ async function runSendAllDMs(platform) {
     return;
   }
 
-  if (!confirm(`Send ${eligible.length} ${platformLabel} DMs automatically?\n\nThis will use browser automation. Make sure 2FA is disabled on the account.`)) return;
+  // Read batch settings from UI
+  const batchSize  = Math.max(1, parseInt((dmBatchSize  && dmBatchSize.value)  || '5',  10));
+  const breakMins  = Math.max(1, parseInt((dmBatchBreak && dmBatchBreak.value) || '10', 10));
+  const dmDelaySec = Math.max(10, parseInt((dmDmDelay   && dmDmDelay.value)    || '60', 10));
 
-  showProgress(`Sending ${platformLabel} DMs…`, 0);
+  const totalBatches = Math.ceil(eligible.length / batchSize);
 
-  const dmsPayload = eligible.map(d => ({
-    handle: d.lead[handleKey].replace(/^@/, ''),
-    message: d[dmKey],
-  }));
+  if (!confirm(
+    `Send ${eligible.length} ${platformLabel} DMs?\n\n` +
+    `• ${batchSize} DMs per batch\n` +
+    `• ${dmDelaySec}s delay between each DM\n` +
+    `• ${breakMins} min break after each batch of ${batchSize}\n` +
+    `• ${totalBatches} batch${totalBatches !== 1 ? 'es' : ''} total\n\n` +
+    `Make sure 2FA is disabled on the account.`
+  )) return;
 
-  try {
-    const body = {
-      platform,
-      dms: dmsPayload,
-      igUsername: creds.igUsername,
-      igPassword: creds.igPassword,
-      liEmail:    creds.liEmail,
-      liPassword: creds.liPassword,
-    };
+  let totalSent = 0, totalFailed = 0;
 
-    const resp = await fetch(`${BASE}/send-bulk-dms`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+  for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+    const batch = eligible.slice(batchIdx * batchSize, (batchIdx + 1) * batchSize);
+    const doneCount = batchIdx * batchSize;
 
-    const data = await resp.json();
+    showProgress(
+      `Batch ${batchIdx + 1}/${totalBatches} — Sending ${platformLabel} DMs…`,
+      Math.round((doneCount / eligible.length) * 100)
+    );
 
-    if (!resp.ok) throw new Error(data.error || 'Server error');
+    for (let i = 0; i < batch.length; i++) {
+      const item = batch[i];
+      const handle = (item.lead[handleKey] || '').replace(/^@/, '');
+      const message = item[dmKey];
+      const overallIdx = doneCount + i;
 
-    // Update badges on DM cards
-    const results = data.results || [];
-    let sent = 0, failed = 0;
-    results.forEach(r => {
-      if (r.ok) sent++;
-      else failed++;
-      // Update card badge
-      const badge = document.getElementById(`dm-send-badge-${platform}-${r.handle.replace(/[^a-z0-9]/gi, '_')}`);
-      if (badge) {
-        badge.textContent = r.ok ? '✓ Sent' : `✗ ${r.error || 'Failed'}`;
-        badge.className = `dm-send-badge ${r.ok ? 'sent' : 'failed'}`;
+      showProgress(
+        `DM ${overallIdx + 1}/${eligible.length} — @${handle}`,
+        Math.round((overallIdx / eligible.length) * 100)
+      );
+
+      // Find badge in the rendered card (search by partial id to avoid collisions)
+      const safeHandle = handle.replace(/[^a-z0-9]/gi, '_');
+      const badge = document.getElementById(`dm-send-badge-${platform}-${safeHandle}`);
+
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 150000); // 2.5min per DM
+
+        const endpoint = platform === 'instagram' ? '/send-instagram-dm' : '/send-linkedin-dm';
+        const body = platform === 'instagram'
+          ? { igUsername: creds.igUsername, igPassword: creds.igPassword, recipientHandle: handle, message }
+          : { liEmail: creds.liEmail, liPassword: creds.liPassword, recipientHandle: handle, message };
+
+        const resp = await fetch(`${BASE}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        const data = await resp.json();
+
+        if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+
+        totalSent++;
+        if (badge) { badge.textContent = `✓ Sent`; badge.className = 'dm-send-badge sent'; }
+        console.log(`✓ DM ${overallIdx + 1}/${eligible.length} sent to ${handle}`);
+      } catch (err) {
+        totalFailed++;
+        const msg = err.name === 'AbortError' ? 'Timed out' : err.message;
+        if (badge) { badge.textContent = `✗ ${msg}`; badge.className = 'dm-send-badge failed'; }
+        console.warn(`✗ DM to ${handle} failed: ${msg}`);
       }
-    });
 
-    hideProgress();
-    toast(`${platformLabel}: ${sent} sent${failed ? `, ${failed} failed` : ''}`);
-  } catch (err) {
-    hideProgress();
-    toast(`Send failed: ${err.message}`, 'error');
+      // Delay between DMs (skip after last in batch)
+      if (i < batch.length - 1) {
+        const jitter = Math.floor(Math.random() * 15); // ±15s jitter
+        await countdown(`Next DM in…`, (dmDelaySec + jitter) * 1000, overallIdx + 1, eligible.length);
+      }
+    }
+
+    // Break between batches (skip after the last batch)
+    if (batchIdx < totalBatches - 1) {
+      const breakMs = breakMins * 60 * 1000;
+      await countdown(
+        `Batch ${batchIdx + 1} done (${batch.length} sent). Pausing before next batch…`,
+        breakMs,
+        doneCount + batch.length,
+        eligible.length
+      );
+    }
   }
+
+  hideProgress();
+  toast(`${platformLabel}: ${totalSent} sent${totalFailed ? `, ${totalFailed} failed` : ' ✓'}`);
+}
+
+// Count down ms while updating the progress overlay text
+function countdown(label, ms, done, total) {
+  return new Promise(resolve => {
+    const end = Date.now() + ms;
+    const tick = () => {
+      const left = Math.max(0, end - Date.now());
+      const secs = Math.ceil(left / 1000);
+      const mins = Math.floor(secs / 60);
+      const s    = secs % 60;
+      const timeStr = mins > 0 ? `${mins}m ${s}s` : `${secs}s`;
+      showProgress(`${label} ${timeStr}`, Math.round((done / total) * 100));
+      if (left <= 0) { resolve(); return; }
+      setTimeout(tick, Math.min(left, 1000));
+    };
+    tick();
+  });
 }
 

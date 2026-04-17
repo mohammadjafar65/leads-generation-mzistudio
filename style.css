@@ -1106,3 +1106,59 @@ input[type="checkbox"] {
   background: var(--accent); color: #fff; transition: background 0.15s;
 }
 .btn-send:hover { background: var(--accent-dark); }
+
+/* ── DM BATCH SETTINGS ──────────────────────────────────────── */
+.dm-batch-settings {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.dm-batch-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.dm-batch-row label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.batch-input {
+  width: 70px;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 0.9rem;
+  font-family: var(--font);
+}
+.batch-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+/* ── DM BATCH SETTINGS ──────────────────────────────────────── */
+.dm-batch-settings {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem;
+  margin-bottom: 1rem; display: flex; gap: 1.5rem;
+  flex-wrap: wrap; align-items: flex-end;
+}
+.dm-batch-row { display: flex; flex-direction: column; gap: 0.35rem; }
+.dm-batch-row label {
+  font-size: 0.72rem; font-weight: 600; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.batch-input {
+  width: 70px; padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text-1);
+  font-size: 0.9rem; font-family: var(--font);
+}
+.batch-input:focus { outline: 2px solid var(--accent); border-color: transparent; }

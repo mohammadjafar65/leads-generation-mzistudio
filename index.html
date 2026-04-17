@@ -254,9 +254,27 @@
           </div>
         </div>
 
+        <div class="dm-batch-settings" id="dmBatchSettings" style="display:none">
+          <div class="dm-batch-row">
+            <label>Batch size</label>
+            <input type="number" id="dmBatchSize" value="5" min="1" max="50" class="batch-input" />
+            <span class="hint">DMs per batch</span>
+          </div>
+          <div class="dm-batch-row">
+            <label>Break between batches</label>
+            <input type="number" id="dmBatchBreak" value="10" min="1" max="120" class="batch-input" />
+            <span class="hint">minutes</span>
+          </div>
+          <div class="dm-batch-row">
+            <label>Delay between DMs</label>
+            <input type="number" id="dmDmDelay" value="60" min="10" max="300" class="batch-input" />
+            <span class="hint">seconds</span>
+          </div>
+        </div>
         <div class="actions" id="dmsActions" style="display:none">
           <button id="sendAllIGDMs" class="btn-send">📤 Send All Instagram DMs</button>
           <button id="sendAllLIDMs" class="btn-ghost">📤 Send All LinkedIn DMs</button>
+          <button id="toggleBatchSettings" class="btn-ghost">⚙ Batch Settings</button>
           <button id="exportDMs" class="btn-ghost">Export (.txt)</button>
           <button id="copyAllDMs" class="btn-ghost">Copy All</button>
         </div>
