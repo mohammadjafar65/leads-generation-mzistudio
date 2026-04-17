@@ -29,6 +29,91 @@ function getPuppeteer() {
   return puppeteerExtra;
 }
 
+// ── SESSION COOKIE CACHE (avoids re-login on every DM) ───────
+// Cookies are cached per account in memory for the server's lifetime.
+const sessionCookies = { instagram: {}, linkedin: {} };
+
+async function launchBrowser() {
+  return getPuppeteer().launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+           '--disable-blink-features=AutomationControlled', '--window-size=1280,800'],
+    defaultViewport: { width: 1280, height: 800 },
+  });
+}
+
+async function loginInstagram(page, username, password) {
+  // Restore cached cookies first
+  const cached = sessionCookies.instagram[username];
+  if (cached && cached.length) {
+    await page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.setCookie(...cached);
+    await page.goto('https://www.instagram.com/', { waitUntil: 'networkidle2', timeout: 20000 });
+    // Check if still logged in
+    const loggedIn = await page.$('svg[aria-label="Home"]').catch(() => null)
+                  || await page.$('a[href="/direct/inbox/"]').catch(() => null);
+    if (loggedIn) { console.log('IG: reused session cookies'); return; }
+    console.log('IG: cached cookies expired, re-logging in');
+  }
+
+  await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.waitForSelector('input[name="username"]', { timeout: 15000 });
+  await humanType(page, 'input[name="username"]', username);
+  await humanType(page, 'input[name="password"]', password);
+  await Promise.all([
+    page.click('button[type="submit"]'),
+    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 25000 }).catch(() => {}),
+  ]);
+  await sleep(3000);
+
+  // Dismiss popups
+  for (const text of ['Not Now', 'Not now', 'Dismiss', 'Turn Off']) {
+    const btn = await page.$x(`//button[contains(text(),"${text}")]`).catch(() => []);
+    if (btn && btn.length) { await btn[0].click(); await sleep(1000); }
+  }
+
+  // Check login succeeded
+  const errEl = await page.$('#slfErrorAlert, [data-testid="login-error-message"]').catch(() => null);
+  if (errEl) throw new Error('Instagram login failed — check username/password.');
+
+  // Cache cookies
+  const cookies = await page.cookies();
+  sessionCookies.instagram[username] = cookies;
+  console.log('IG: logged in fresh, cookies cached');
+}
+
+async function loginLinkedIn(page, email, password) {
+  const cached = sessionCookies.linkedin[email];
+  if (cached && cached.length) {
+    await page.goto('https://www.linkedin.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.setCookie(...cached);
+    await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'networkidle2', timeout: 20000 });
+    const loggedIn = await page.$('.global-nav__me').catch(() => null)
+                  || await page.$('[data-test-global-nav-me-photo]').catch(() => null);
+    if (loggedIn) { console.log('LI: reused session cookies'); return; }
+    console.log('LI: cached cookies expired, re-logging in');
+  }
+
+  await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.waitForSelector('#username', { timeout: 15000 });
+  await humanType(page, '#username', email);
+  await humanType(page, '#password', password);
+  await Promise.all([
+    page.click('button[type="submit"]'),
+    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 25000 }).catch(() => {}),
+  ]);
+  await sleep(3000);
+
+  if (page.url().includes('checkpoint') || page.url().includes('challenge')) {
+    sessionCookies.linkedin[email] = []; // clear bad cookies
+    throw new Error('LinkedIn security challenge detected. Log in manually once from this machine to clear it, then retry.');
+  }
+
+  const cookies = await page.cookies();
+  sessionCookies.linkedin[email] = cookies;
+  console.log('LI: logged in fresh, cookies cached');
+}
+
 // ── IMAP HELPER: STORE IN SENT FOLDER ──────────────────────────
 async function appendToSent(smtpUser, smtpPassword, mailOptions) {
   try {
@@ -225,54 +310,98 @@ app.post(`${BASE}/send-instagram-dm`, requireAuth, async (req, res) => {
 
   let browser;
   try {
-    browser = await getPuppeteer().launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--window-size=1280,800'],
-      defaultViewport: { width: 1280, height: 800 },
-    });
-
+    browser = await launchBrowser();
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
-    // ── Login ──
-    await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForSelector('input[name="username"]', { timeout: 15000 });
-    await humanType(page, 'input[name="username"]', igUsername);
-    await humanType(page, 'input[name="password"]', igPassword);
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
-    ]);
-    await sleep(3000);
+    await loginInstagram(page, igUsername, igPassword);
 
-    // Dismiss "Save your login info?" and notifications popups
-    for (const text of ['Not Now', 'Not now', 'Dismiss']) {
-      const btn = await page.$x(`//button[contains(text(),"${text}")]`).catch(() => []);
-      if (btn && btn.length) { await btn[0].click(); await sleep(1000); break; }
-    }
-
-    // ── Navigate to recipient's profile and open DM ──
     const cleanHandle = recipientHandle.replace(/^@/, '');
+
+    // Navigate directly to DM compose with the target user
     await page.goto(`https://www.instagram.com/${cleanHandle}/`, { waitUntil: 'networkidle2', timeout: 20000 });
     await sleep(2000);
 
-    // Click "Message" button on profile
-    const messageBtnXpath = `//div[@role="button"][contains(text(),"Message")] | //a[contains(text(),"Message")]`;
-    const msgBtns = await page.$x(messageBtnXpath).catch(() => []);
-    if (!msgBtns || msgBtns.length === 0) {
-      throw new Error(`Could not find Message button on @${cleanHandle}'s profile. They may not allow DMs or the account doesn't exist.`);
+    // Try multiple selectors for the Message button (IG updates these frequently)
+    const msgSelectors = [
+      'div[role="button"]::-text("Message")',   // CSS4-style (won't work directly)
+    ];
+    // Use XPath instead — much more reliable for text-based buttons
+    let clicked = false;
+    for (const xpath of [
+      '//div[@role="button" and normalize-space(text())="Message"]',
+      '//div[@role="button" and contains(text(),"Message")]',
+      '//a[contains(@href,"/direct/") and contains(text(),"Message")]',
+      '//button[contains(text(),"Message")]',
+    ]) {
+      const btns = await page.$x(xpath).catch(() => []);
+      if (btns && btns.length) {
+        await btns[0].click();
+        clicked = true;
+        break;
+      }
     }
-    await msgBtns[0].click();
+
+    if (!clicked) {
+      // Fallback: go directly to DM thread via direct/new and search for handle
+      await page.goto('https://www.instagram.com/direct/new/', { waitUntil: 'networkidle2', timeout: 20000 });
+      await sleep(2000);
+      const searchInput = await page.waitForSelector(
+        'input[placeholder*="Search"], input[name="queryBox"]', { timeout: 10000 }
+      );
+      await searchInput.type(cleanHandle, { delay: 60 });
+      await sleep(2000);
+      // Click first result
+      const firstResult = await page.$('div[role="button"][tabindex="0"] span').catch(() => null)
+                       || await page.$('button._acan').catch(() => null);
+      if (firstResult) {
+        await firstResult.click();
+        await sleep(1000);
+        // Click "Next" / "Chat" button
+        for (const xpath of ['//div[text()="Next"]', '//button[text()="Next"]', '//div[text()="Chat"]']) {
+          const btn = await page.$x(xpath).catch(() => []);
+          if (btn && btn.length) { await btn[0].click(); break; }
+        }
+        clicked = true;
+      }
+    }
+
+    if (!clicked) throw new Error(`Could not open DM thread with @${cleanHandle}. They may not accept DMs or the account doesn't exist.`);
+
     await sleep(3000);
 
-    // Type and send message
-    const inputSel = 'textarea[placeholder], div[role="textbox"][aria-label*="essage"], div[contenteditable="true"]';
-    await page.waitForSelector(inputSel, { timeout: 12000 });
-    await page.click(inputSel);
-    await humanType(page, inputSel, message, true);
+    // Type message — try multiple compose box selectors
+    let typed = false;
+    for (const sel of [
+      'div[aria-label="Message"]',
+      'div[contenteditable="true"][tabindex="0"]',
+      'div[role="textbox"]',
+      'textarea',
+    ]) {
+      const el = await page.$(sel).catch(() => null);
+      if (el) {
+        await el.click();
+        await sleep(300);
+        await humanTypeInEl(page, el, message);
+        typed = true;
+        break;
+      }
+    }
+    if (!typed) throw new Error('Could not find Instagram DM compose box.');
+
     await sleep(500);
-    await page.keyboard.press('Enter');
+
+    // Send — try button first, then Enter key
+    const sendBtn = await page.$('button[type="submit"]:not([disabled]), div[role="button"][aria-label*="Send"]').catch(() => null);
+    if (sendBtn) {
+      await sendBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
     await sleep(2000);
+
+    // Update cached cookies after activity
+    sessionCookies.instagram[igUsername] = await page.cookies();
 
     console.log(`✉  Instagram DM sent to @${cleanHandle}`);
     res.json({ ok: true });
@@ -296,85 +425,73 @@ app.post(`${BASE}/send-linkedin-dm`, requireAuth, async (req, res) => {
 
   let browser;
   try {
-    browser = await getPuppeteer().launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--window-size=1280,800'],
-      defaultViewport: { width: 1280, height: 800 },
-    });
-
+    browser = await launchBrowser();
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
-    // ── Login ──
-    await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForSelector('#username', { timeout: 15000 });
-    await humanType(page, '#username', liEmail);
-    await humanType(page, '#password', liPassword);
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
-    ]);
-    await sleep(3000);
+    await loginLinkedIn(page, liEmail, liPassword);
 
-    // Check for security challenge
-    const currentUrl = page.url();
-    if (currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
-      throw new Error('LinkedIn security challenge detected. Please log in manually once to clear it, then retry.');
-    }
-
-    // ── Navigate to profile ──
     const cleanHandle = recipientHandle.replace(/^@/, '');
-    // Try /in/ (personal) first, fall back to /company/
-    await page.goto(`https://www.linkedin.com/in/${cleanHandle}/`, { waitUntil: 'networkidle2', timeout: 20000 });
-    await sleep(2000);
 
-    // If profile not found, try company page
-    const notFoundEl = await page.$('.not-found, .error-container').catch(() => null);
-    if (notFoundEl || page.url().includes('404')) {
-      await page.goto(`https://www.linkedin.com/company/${cleanHandle}/`, { waitUntil: 'networkidle2', timeout: 20000 });
-      await sleep(2000);
+    // Try personal profile first (/in/), then company (/company/)
+    let profileLoaded = false;
+    for (const path of [`/in/${cleanHandle}/`, `/company/${cleanHandle}/`]) {
+      await page.goto(`https://www.linkedin.com${path}`, { waitUntil: 'networkidle2', timeout: 20000 });
+      await sleep(1500);
+      const title = await page.title().catch(() => '');
+      if (!title.toLowerCase().includes('page not found') && !page.url().includes('authwall')) {
+        profileLoaded = true;
+        break;
+      }
+    }
+    if (!profileLoaded) throw new Error(`LinkedIn profile not found for "${cleanHandle}".`);
+
+    // Click Message button — try multiple approaches
+    let clicked = false;
+
+    // Approach 1: XPath text match
+    for (const xpath of [
+      '//button[normalize-space(text())="Message"]',
+      '//button[contains(@aria-label,"Message")]',
+      '//a[normalize-space(text())="Message"]',
+    ]) {
+      const els = await page.$x(xpath).catch(() => []);
+      if (els && els.length) { await els[0].click(); clicked = true; break; }
     }
 
-    // Click "Message" button
-    const msgSelectors = [
-      'button.message-anywhere-button',
-      'a[data-control-name="message"]',
-      'button[aria-label*="Message"]',
-      '.pvs-profile-actions button:first-of-type',
-      'main section:first-of-type button:first-of-type',
-    ];
-    let clicked = false;
-    for (const sel of msgSelectors) {
-      const el = await page.$(sel).catch(() => null);
-      if (el) {
-        const text = await el.evaluate(e => e.textContent.toLowerCase()).catch(() => '');
-        if (text.includes('message') || text.includes('connect') || !text) {
-          await el.click();
-          clicked = true;
-          break;
+    // Approach 2: CSS selectors
+    if (!clicked) {
+      for (const sel of [
+        'button.message-anywhere-button',
+        'button[data-control-name="message"]',
+        '.pvs-profile-actions__action button',
+        '.artdeco-button--primary',
+      ]) {
+        const el = await page.$(sel).catch(() => null);
+        if (el) {
+          const txt = await el.evaluate(e => e.textContent).catch(() => '');
+          if (txt.toLowerCase().includes('message')) { await el.click(); clicked = true; break; }
         }
       }
     }
-    if (!clicked) {
-      // Try XPath
-      const btns = await page.$x('//button[contains(., "Message")] | //a[contains(., "Message")]').catch(() => []);
-      if (btns && btns.length) { await btns[0].click(); clicked = true; }
-    }
-    if (!clicked) throw new Error(`Could not find Message button on LinkedIn profile for "${cleanHandle}". They may not allow direct messages.`);
+
+    if (!clicked) throw new Error(`Could not find Message button on LinkedIn for "${cleanHandle}". They may not accept direct messages.`);
 
     await sleep(2500);
 
-    // Type message in the compose box
-    const composeSelectors = [
-      'div.msg-form__contenteditable',
-      'div[contenteditable="true"][role="textbox"]',
-      'textarea.msg-form__textarea',
-    ];
+    // Type message in compose box
     let typed = false;
-    for (const sel of composeSelectors) {
+    for (const sel of [
+      'div.msg-form__contenteditable',
+      'div[aria-label*="Write a message"]',
+      'div[contenteditable="true"][role="textbox"]',
+      'div[data-artdeco-is-focused]',
+      'textarea.msg-form__textarea',
+    ]) {
       const el = await page.$(sel).catch(() => null);
       if (el) {
         await el.click();
+        await sleep(300);
         await humanTypeInEl(page, el, message);
         typed = true;
         break;
@@ -382,30 +499,32 @@ app.post(`${BASE}/send-linkedin-dm`, requireAuth, async (req, res) => {
     }
     if (!typed) throw new Error('Could not find LinkedIn message compose box.');
 
-    await sleep(500);
+    await sleep(600);
 
-    // Send button
-    const sendBtnSelectors = [
+    // Click send button
+    let sent = false;
+    for (const sel of [
       'button.msg-form__send-button',
       'button[aria-label="Send"]',
-      'button[type="submit"]',
-    ];
-    let sent = false;
-    for (const sel of sendBtnSelectors) {
+      'button[data-control-name="send"]',
+    ]) {
       const btn = await page.$(sel).catch(() => null);
       if (btn) {
-        const disabled = await btn.evaluate(e => e.disabled).catch(() => false);
+        const disabled = await btn.evaluate(e => e.disabled || e.getAttribute('aria-disabled') === 'true').catch(() => false);
         if (!disabled) { await btn.click(); sent = true; break; }
       }
     }
     if (!sent) {
-      // Fallback: Ctrl+Enter
       await page.keyboard.down('Control');
       await page.keyboard.press('Enter');
       await page.keyboard.up('Control');
     }
 
     await sleep(2000);
+
+    // Update cached cookies after activity
+    sessionCookies.linkedin[liEmail] = await page.cookies();
+
     console.log(`✉  LinkedIn DM sent to ${cleanHandle}`);
     res.json({ ok: true });
   } catch (err) {
@@ -465,105 +584,7 @@ app.post(`${BASE}/send-bulk-dms`, requireAuth, async (req, res) => {
   res.json({ results });
 });
 
-// ── SHARED PUPPETEER HELPERS ──────────────────────────────────
-async function sendInstagramDM({ igUsername, igPassword, recipientHandle, message }) {
-  let browser;
-  try {
-    browser = await getPuppeteer().launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      defaultViewport: { width: 1280, height: 800 },
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36');
-    await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForSelector('input[name="username"]', { timeout: 15000 });
-    await humanType(page, 'input[name="username"]', igUsername);
-    await humanType(page, 'input[name="password"]', igPassword);
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
-    ]);
-    await sleep(3000);
-    for (const text of ['Not Now', 'Not now', 'Dismiss']) {
-      const btn = await page.$x(`//button[contains(text(),"${text}")]`).catch(() => []);
-      if (btn && btn.length) { await btn[0].click(); await sleep(1000); break; }
-    }
-    const cleanHandle = recipientHandle.replace(/^@/, '');
-    await page.goto(`https://www.instagram.com/${cleanHandle}/`, { waitUntil: 'networkidle2', timeout: 20000 });
-    await sleep(2000);
-    const msgBtns = await page.$x('//div[@role="button"][contains(text(),"Message")] | //a[contains(text(),"Message")]').catch(() => []);
-    if (!msgBtns || !msgBtns.length) throw new Error(`No Message button found on @${cleanHandle}'s profile`);
-    await msgBtns[0].click();
-    await sleep(3000);
-    const inputSel = 'textarea[placeholder], div[contenteditable="true"]';
-    await page.waitForSelector(inputSel, { timeout: 12000 });
-    await page.click(inputSel);
-    await humanType(page, inputSel, message, true);
-    await sleep(500);
-    await page.keyboard.press('Enter');
-    await sleep(2000);
-    return { ok: true };
-  } finally {
-    if (browser) await browser.close().catch(() => {});
-  }
-}
-
-async function sendLinkedInDM({ liEmail, liPassword, recipientHandle, message }) {
-  let browser;
-  try {
-    browser = await getPuppeteer().launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      defaultViewport: { width: 1280, height: 800 },
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36');
-    await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForSelector('#username', { timeout: 15000 });
-    await humanType(page, '#username', liEmail);
-    await humanType(page, '#password', liPassword);
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
-    ]);
-    await sleep(3000);
-    if (page.url().includes('checkpoint') || page.url().includes('challenge')) {
-      throw new Error('LinkedIn security challenge detected. Log in manually once to clear it.');
-    }
-    const cleanHandle = recipientHandle.replace(/^@/, '');
-    await page.goto(`https://www.linkedin.com/in/${cleanHandle}/`, { waitUntil: 'networkidle2', timeout: 20000 });
-    await sleep(2000);
-    // Try /company/ if /in/ not found
-    const title = await page.title().catch(() => '');
-    if (title.toLowerCase().includes('page not found') || page.url().includes('404')) {
-      await page.goto(`https://www.linkedin.com/company/${cleanHandle}/`, { waitUntil: 'networkidle2', timeout: 20000 });
-      await sleep(2000);
-    }
-    let clicked = false;
-    const btns = await page.$x('//button[contains(., "Message")] | //a[contains(., "Message")]').catch(() => []);
-    if (btns && btns.length) { await btns[0].click(); clicked = true; }
-    if (!clicked) throw new Error(`No Message button found on LinkedIn for "${cleanHandle}"`);
-    await sleep(2500);
-    const composeSelectors = ['div.msg-form__contenteditable', 'div[contenteditable="true"][role="textbox"]', 'textarea.msg-form__textarea'];
-    let typed = false;
-    for (const sel of composeSelectors) {
-      const el = await page.$(sel).catch(() => null);
-      if (el) { await el.click(); await humanTypeInEl(page, el, message); typed = true; break; }
-    }
-    if (!typed) throw new Error('Could not find LinkedIn message compose box.');
-    await sleep(500);
-    const sendBtn = await page.$('button.msg-form__send-button, button[aria-label="Send"]').catch(() => null);
-    if (sendBtn) { await sendBtn.click(); }
-    else { await page.keyboard.down('Control'); await page.keyboard.press('Enter'); await page.keyboard.up('Control'); }
-    await sleep(2000);
-    return { ok: true };
-  } finally {
-    if (browser) await browser.close().catch(() => {});
-  }
-}
-
-// Human-like typing for Puppeteer
+// ── PUPPETEER TYPING HELPERS ──────────────────────────────────
 async function humanType(page, selector, text, useExisting = false) {
   if (!useExisting) await page.click(selector);
   for (const char of text) {
@@ -578,6 +599,7 @@ async function humanTypeInEl(page, el, text) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 app.post(`${BASE}/send`, requireAuth, async (req, res) => {
   const { smtpPassword, from, to, subject, body } = req.body;
 

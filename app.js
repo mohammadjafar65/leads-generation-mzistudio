@@ -1827,6 +1827,7 @@ function renderDMCard(item) {
         const timer = setTimeout(() => ctrl.abort(), 120000); // 2min timeout
         const resp = await fetch(`${BASE}/send-instagram-dm`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ igUsername: creds.igUsername, igPassword: creds.igPassword, recipientHandle: igHandle, message: item.instagram_dm }),
           signal: ctrl.signal,
         });
@@ -1855,6 +1856,7 @@ function renderDMCard(item) {
         const timer = setTimeout(() => ctrl.abort(), 120000);
         const resp = await fetch(`${BASE}/send-linkedin-dm`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ liEmail: creds.liEmail, liPassword: creds.liPassword, recipientHandle: liHandle, message: item.linkedin_dm }),
           signal: ctrl.signal,
         });
@@ -1999,6 +2001,7 @@ async function runSendAllDMs(platform) {
         const resp = await fetch(`${BASE}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(body),
           signal: ctrl.signal,
         });
