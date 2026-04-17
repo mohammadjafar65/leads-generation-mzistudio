@@ -180,6 +180,11 @@ try {
   if (match && match[1] && match[1] !== 'index.html') BASE = '/' + match[1];
 } catch {}
 
+// Puppeteer-based features (DM sending) MUST run on the local server.
+// The production Plesk server cannot run Chromium.
+// Change PUPPET_BASE if your local server runs on a different port.
+const PUPPET_BASE = 'http://localhost:3001';
+
 // History DOM refs
 const historyList    = $('historyList');
 const historyActions = $('historyActions');
@@ -1825,7 +1830,7 @@ function renderDMCard(item) {
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 120000); // 2min timeout
-        const resp = await fetch(`${BASE}/send-instagram-dm`, {
+        const resp = await fetch(`${PUPPET_BASE}/send-instagram-dm`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ igUsername: creds.igUsername, igPassword: creds.igPassword, recipientHandle: igHandle, message: item.instagram_dm }),
@@ -1854,7 +1859,7 @@ function renderDMCard(item) {
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 120000);
-        const resp = await fetch(`${BASE}/send-linkedin-dm`, {
+        const resp = await fetch(`${PUPPET_BASE}/send-linkedin-dm`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ liEmail: creds.liEmail, liPassword: creds.liPassword, recipientHandle: liHandle, message: item.linkedin_dm }),
@@ -1998,7 +2003,7 @@ async function runSendAllDMs(platform) {
           ? { igUsername: creds.igUsername, igPassword: creds.igPassword, recipientHandle: handle, message }
           : { liEmail: creds.liEmail, liPassword: creds.liPassword, recipientHandle: handle, message };
 
-        const resp = await fetch(`${BASE}${endpoint}`, {
+        const resp = await fetch(`${PUPPET_BASE}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

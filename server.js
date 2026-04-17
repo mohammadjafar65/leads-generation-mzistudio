@@ -194,7 +194,17 @@ const PORT = process.env.PORT || 3001;
 const BASE = (process.env.APP_BASE_PATH || '').replace(/\/$/, '');
 
 app.use(cors({
-  origin: 'http://localhost:3000', // Change to your frontend URL if different
+  origin: (origin, cb) => {
+    // Allow requests from localhost (dev), the production domain, and direct server calls
+    const allowed = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://mzistudio.com',
+      'http://mzistudio.com',
+    ];
+    if (!origin || allowed.some(o => origin.startsWith(o))) return cb(null, true);
+    cb(new Error('Not allowed by CORS: ' + origin));
+  },
   credentials: true
 }));
 app.use(express.json());
