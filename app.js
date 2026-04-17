@@ -74,6 +74,7 @@ const STATE = {
   apiKey: '',
   agency: { name: '', agencyName: '', website: '', phone: '', callLink: '', tagline: '' },
   smtp: { password: '', fromName: '' },
+  socialCreds: { igUsername: '', igPassword: '', liEmail: '', liPassword: '' },
   leads: [],
   emails: [],
   followups: [],
@@ -126,6 +127,15 @@ const findAllSocialsBtn2 = $('findAllSocialsBtn2');
 const generateDMsBtn   = $('generateDMsBtn');
 const exportDMs        = $('exportDMs');
 const copyAllDMs       = $('copyAllDMs');
+const sendAllIGDMs     = $('sendAllIGDMs');
+const sendAllLIDMs     = $('sendAllLIDMs');
+// Social credentials settings
+const igUsernameInput  = $('igUsernameInput');
+const igPasswordInput  = $('igPasswordInput');
+const liEmailInput     = $('liEmailInput');
+const liPasswordInput  = $('liPasswordInput');
+const saveSocialCreds  = $('saveSocialCreds');
+const socialCredsStatus= $('socialCredsStatus');
 const exportSocials    = $('exportSocials');
 
 // Stats DOM refs
@@ -194,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (stored) { STATE.apiKey = stored; apiKeyInput.value = stored; }
   loadAgencySettings();
   loadSmtpSettings();
+  loadSocialCredentials();
   bindEvents();
   checkSmtpServer();
 });
@@ -343,6 +354,9 @@ function bindEvents() {
   if (generateDMsBtn) generateDMsBtn.addEventListener('click', runGenerateDMs);
   if (exportDMs) exportDMs.addEventListener('click', exportAllDMs);
   if (copyAllDMs) copyAllDMs.addEventListener('click', copyAllDMsText);
+  if (sendAllIGDMs) sendAllIGDMs.addEventListener('click', () => runSendAllDMs('instagram'));
+  if (sendAllLIDMs) sendAllLIDMs.addEventListener('click', () => runSendAllDMs('linkedin'));
+  if (saveSocialCreds) saveSocialCreds.addEventListener('click', saveSocialCredentials);
 
   // SMTP
   saveSmtpBtn.addEventListener('click', saveSmtpSettings);
@@ -1737,6 +1751,11 @@ function renderDMCard(item) {
   const igIcon = item.lead.instagram ? `📸 @${esc(item.lead.instagram)}` : '📸 Instagram';
   const liIcon = item.lead.linkedin  ? `🔗 ${esc(item.lead.linkedin)}`   : '🔗 LinkedIn';
 
+  const igHandle = (item.lead.instagram || '').replace(/^@/, '');
+  const liHandle = (item.lead.linkedin  || '').replace(/^@/, '');
+  const igBadgeId = `dm-send-badge-instagram-${igHandle.replace(/[^a-z0-9]/gi, '_')}`;
+  const liBadgeId = `dm-send-badge-linkedin-${liHandle.replace(/[^a-z0-9]/gi, '_')}`;
+
   card.innerHTML = `
     <div class="dm-card-header">
       <div>
@@ -1748,6 +1767,8 @@ function renderDMCard(item) {
       </div>
       <div class="email-card-actions">
         <button class="btn-primary btn-sm copy-dm-btn">Copy</button>
+        ${igHandle ? `<button class="btn-ghost btn-sm send-ig-btn" title="Send Instagram DM">📤 IG</button>` : ''}
+        ${liHandle ? `<button class="btn-ghost btn-sm send-li-btn" title="Send LinkedIn DM">📤 LI</button>` : ''}
       </div>
     </div>
     <div class="dm-card-body">
@@ -1757,6 +1778,10 @@ function renderDMCard(item) {
       </div>
       <div class="dm-text" id="dm-text-${item.lead.id || Date.now()}">${esc(item.instagram_dm)}</div>
       <div class="dm-char-count" id="dm-chars-${item.lead.id || Date.now()}">${(item.instagram_dm||'').length} chars</div>
+      <div class="dm-send-badges">
+        ${igHandle ? `<span class="dm-send-badge pending" id="${igBadgeId}">IG: Not sent</span>` : ''}
+        ${liHandle ? `<span class="dm-send-badge pending" id="${liBadgeId}">LI: Not sent</span>` : ''}
+      </div>
     </div>
   `;
 
@@ -1778,6 +1803,53 @@ function renderDMCard(item) {
     navigator.clipboard.writeText(text).then(() => toast('DM copied!'));
   });
 
+  // Per-card send buttons
+  const sendIGBtn = card.querySelector('.send-ig-btn');
+  if (sendIGBtn) {
+    sendIGBtn.addEventListener('click', async () => {
+      const creds = STATE.socialCreds;
+      if (!creds.igUsername || !creds.igPassword) { toast('Add Instagram credentials in Settings first.', 'error'); switchTab('settings'); return; }
+      sendIGBtn.disabled = true; sendIGBtn.textContent = '⏳ Sending…';
+      const badge = document.getElementById(igBadgeId);
+      try {
+        const resp = await fetch(`${BASE}/send-instagram-dm`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ igUsername: creds.igUsername, igPassword: creds.igPassword, recipientHandle: igHandle, message: item.instagram_dm }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || 'Failed');
+        if (badge) { badge.textContent = '✓ IG Sent'; badge.className = 'dm-send-badge sent'; }
+        sendIGBtn.textContent = '✓ Sent'; toast(`IG DM sent to @${igHandle}`);
+      } catch (err) {
+        if (badge) { badge.textContent = `✗ ${err.message}`; badge.className = 'dm-send-badge failed'; }
+        sendIGBtn.disabled = false; sendIGBtn.textContent = '📤 IG'; toast(`IG DM failed: ${err.message}`, 'error');
+      }
+    });
+  }
+
+  const sendLIBtn = card.querySelector('.send-li-btn');
+  if (sendLIBtn) {
+    sendLIBtn.addEventListener('click', async () => {
+      const creds = STATE.socialCreds;
+      if (!creds.liEmail || !creds.liPassword) { toast('Add LinkedIn credentials in Settings first.', 'error'); switchTab('settings'); return; }
+      sendLIBtn.disabled = true; sendLIBtn.textContent = '⏳ Sending…';
+      const badge = document.getElementById(liBadgeId);
+      try {
+        const resp = await fetch(`${BASE}/send-linkedin-dm`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ liEmail: creds.liEmail, liPassword: creds.liPassword, recipientHandle: liHandle, message: item.linkedin_dm }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || 'Failed');
+        if (badge) { badge.textContent = '✓ LI Sent'; badge.className = 'dm-send-badge sent'; }
+        sendLIBtn.textContent = '✓ Sent'; toast(`LI DM sent to ${liHandle}`);
+      } catch (err) {
+        if (badge) { badge.textContent = `✗ ${err.message}`; badge.className = 'dm-send-badge failed'; }
+        sendLIBtn.disabled = false; sendLIBtn.textContent = '📤 LI'; toast(`LI DM failed: ${err.message}`, 'error');
+      }
+    });
+  }
+
   dmsList.appendChild(card);
 }
 
@@ -1798,3 +1870,108 @@ function copyAllDMsText() {
   ).join('\n\n');
   navigator.clipboard.writeText(text).then(() => toast('All DMs copied!'));
 }
+
+// ── SOCIAL CREDENTIALS ────────────────────────────────────────
+function saveSocialCredentials() {
+  STATE.socialCreds = {
+    igUsername: (igUsernameInput ? igUsernameInput.value.trim().replace(/^@/, '') : ''),
+    igPassword: (igPasswordInput ? igPasswordInput.value : ''),
+    liEmail:    (liEmailInput    ? liEmailInput.value.trim() : ''),
+    liPassword: (liPasswordInput ? liPasswordInput.value : ''),
+  };
+  localStorage.setItem('socialCreds', JSON.stringify(STATE.socialCreds));
+  if (socialCredsStatus) {
+    socialCredsStatus.classList.remove('hidden');
+    setTimeout(() => socialCredsStatus.classList.add('hidden'), 2500);
+  }
+  toast('Social credentials saved');
+}
+
+function loadSocialCredentials() {
+  try {
+    const stored = localStorage.getItem('socialCreds');
+    if (!stored) return;
+    const creds = JSON.parse(stored);
+    STATE.socialCreds = { ...STATE.socialCreds, ...creds };
+    if (igUsernameInput) igUsernameInput.value = creds.igUsername || '';
+    if (igPasswordInput) igPasswordInput.value = creds.igPassword || '';
+    if (liEmailInput)    liEmailInput.value    = creds.liEmail    || '';
+    if (liPasswordInput) liPasswordInput.value = creds.liPassword || '';
+  } catch (e) { /* ignore */ }
+}
+
+// ── SEND ALL DMs ──────────────────────────────────────────────
+async function runSendAllDMs(platform) {
+  if (!STATE.dms.length) { toast('No DMs generated yet.'); return; }
+
+  const creds = STATE.socialCreds;
+  if (platform === 'instagram' && (!creds.igUsername || !creds.igPassword)) {
+    toast('Please save your Instagram credentials in Settings first.', 'error');
+    switchTab('settings'); return;
+  }
+  if (platform === 'linkedin' && (!creds.liEmail || !creds.liPassword)) {
+    toast('Please save your LinkedIn credentials in Settings first.', 'error');
+    switchTab('settings'); return;
+  }
+
+  const platformLabel = platform === 'instagram' ? 'Instagram' : 'LinkedIn';
+  const dmKey = platform === 'instagram' ? 'instagram_dm' : 'linkedin_dm';
+  const handleKey = platform === 'instagram' ? 'instagram' : 'linkedin';
+
+  const eligible = STATE.dms.filter(d => d.lead[handleKey] && d[dmKey]);
+  if (!eligible.length) {
+    toast(`No leads have a ${platformLabel} handle + generated DM.`);
+    return;
+  }
+
+  if (!confirm(`Send ${eligible.length} ${platformLabel} DMs automatically?\n\nThis will use browser automation. Make sure 2FA is disabled on the account.`)) return;
+
+  showProgress(`Sending ${platformLabel} DMs…`, 0);
+
+  const dmsPayload = eligible.map(d => ({
+    handle: d.lead[handleKey].replace(/^@/, ''),
+    message: d[dmKey],
+  }));
+
+  try {
+    const body = {
+      platform,
+      dms: dmsPayload,
+      igUsername: creds.igUsername,
+      igPassword: creds.igPassword,
+      liEmail:    creds.liEmail,
+      liPassword: creds.liPassword,
+    };
+
+    const resp = await fetch(`${BASE}/send-bulk-dms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) throw new Error(data.error || 'Server error');
+
+    // Update badges on DM cards
+    const results = data.results || [];
+    let sent = 0, failed = 0;
+    results.forEach(r => {
+      if (r.ok) sent++;
+      else failed++;
+      // Update card badge
+      const badge = document.getElementById(`dm-send-badge-${platform}-${r.handle.replace(/[^a-z0-9]/gi, '_')}`);
+      if (badge) {
+        badge.textContent = r.ok ? '✓ Sent' : `✗ ${r.error || 'Failed'}`;
+        badge.className = `dm-send-badge ${r.ok ? 'sent' : 'failed'}`;
+      }
+    });
+
+    hideProgress();
+    toast(`${platformLabel}: ${sent} sent${failed ? `, ${failed} failed` : ''}`);
+  } catch (err) {
+    hideProgress();
+    toast(`Send failed: ${err.message}`, 'error');
+  }
+}
+

@@ -255,7 +255,9 @@
         </div>
 
         <div class="actions" id="dmsActions" style="display:none">
-          <button id="exportDMs" class="btn-primary">Export DMs (.txt)</button>
+          <button id="sendAllIGDMs" class="btn-send">📤 Send All Instagram DMs</button>
+          <button id="sendAllLIDMs" class="btn-ghost">📤 Send All LinkedIn DMs</button>
+          <button id="exportDMs" class="btn-ghost">Export (.txt)</button>
           <button id="copyAllDMs" class="btn-ghost">Copy All</button>
         </div>
       </section>
@@ -364,7 +366,8 @@
           </div>
 
           <!-- RIGHT COL -->
-          <div class="settings-card">
+          <div>
+            <div class="settings-card" style="margin-bottom:1.5rem">
             <div class="settings-card-title">📧 SMTP Email Sending</div>
             <div class="smtp-info-box">
               <div class="smtp-info-row"><span>Host</span><code>mzistudio.com</code></div>
@@ -386,6 +389,38 @@
             <div class="settings-group">
               <button id="testSmtp" class="btn-ghost">Test Connection</button>
               <span class="settings-status hidden" id="smtpTestStatus">✓ Connected</span>
+            </div>
+          </div><!-- /smtp card -->
+
+            <!-- SOCIAL CREDENTIALS -->
+            <div class="settings-card">
+              <div class="settings-card-title">📱 Social Account Credentials</div>
+              <p class="hint" style="margin-bottom:1rem">Credentials are stored in your browser only and never sent anywhere except to Instagram/LinkedIn.</p>
+
+              <div class="settings-section-label">Instagram</div>
+              <div class="settings-group">
+                <label for="igUsernameInput">Username</label>
+                <input type="text" id="igUsernameInput" class="settings-input" placeholder="@yourusername" />
+              </div>
+              <div class="settings-group">
+                <label for="igPasswordInput">Password</label>
+                <input type="password" id="igPasswordInput" class="settings-input" placeholder="Instagram password" />
+              </div>
+
+              <div class="settings-section-label" style="margin-top:1rem">LinkedIn</div>
+              <div class="settings-group">
+                <label for="liEmailInput">Email</label>
+                <input type="email" id="liEmailInput" class="settings-input" placeholder="email@example.com" />
+              </div>
+              <div class="settings-group">
+                <label for="liPasswordInput">Password</label>
+                <input type="password" id="liPasswordInput" class="settings-input" placeholder="LinkedIn password" />
+              </div>
+
+              <div class="settings-actions">
+                <button id="saveSocialCreds" class="btn-primary">Save Credentials</button>
+                <span class="settings-status hidden" id="socialCredsStatus">✓ Saved</span>
+              </div>
             </div>
           </div>
 
