@@ -12,9 +12,22 @@ const nodemailer   = require('nodemailer');
 const cors         = require('cors');
 const imaps        = require('imap-simple');
 const MailComposer = require('nodemailer/lib/mail-composer');
-const puppeteerExtra = require('puppeteer-extra');
-const StealthPlugin  = require('puppeteer-extra-plugin-stealth');
-puppeteerExtra.use(StealthPlugin());
+
+// Puppeteer is loaded lazily so the server starts even if Chromium is unavailable
+let puppeteerReady = false;
+let puppeteerExtra = null;
+function getPuppeteer() {
+  if (puppeteerReady) return puppeteerExtra;
+  try {
+    puppeteerExtra = require('puppeteer-extra');
+    const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+    puppeteerExtra.use(StealthPlugin());
+    puppeteerReady = true;
+  } catch (e) {
+    throw new Error('Puppeteer is not available on this server: ' + e.message);
+  }
+  return puppeteerExtra;
+}
 
 // ── IMAP HELPER: STORE IN SENT FOLDER ──────────────────────────
 async function appendToSent(smtpUser, smtpPassword, mailOptions) {
@@ -212,7 +225,7 @@ app.post(`${BASE}/send-instagram-dm`, requireAuth, async (req, res) => {
 
   let browser;
   try {
-    browser = await puppeteerExtra.launch({
+    browser = await getPuppeteer().launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--window-size=1280,800'],
       defaultViewport: { width: 1280, height: 800 },
@@ -283,7 +296,7 @@ app.post(`${BASE}/send-linkedin-dm`, requireAuth, async (req, res) => {
 
   let browser;
   try {
-    browser = await puppeteerExtra.launch({
+    browser = await getPuppeteer().launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--window-size=1280,800'],
       defaultViewport: { width: 1280, height: 800 },
@@ -456,7 +469,7 @@ app.post(`${BASE}/send-bulk-dms`, requireAuth, async (req, res) => {
 async function sendInstagramDM({ igUsername, igPassword, recipientHandle, message }) {
   let browser;
   try {
-    browser = await puppeteerExtra.launch({
+    browser = await getPuppeteer().launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       defaultViewport: { width: 1280, height: 800 },
@@ -499,7 +512,7 @@ async function sendInstagramDM({ igUsername, igPassword, recipientHandle, messag
 async function sendLinkedInDM({ liEmail, liPassword, recipientHandle, message }) {
   let browser;
   try {
-    browser = await puppeteerExtra.launch({
+    browser = await getPuppeteer().launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       defaultViewport: { width: 1280, height: 800 },
