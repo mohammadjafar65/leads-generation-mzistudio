@@ -195,18 +195,32 @@ const BASE = (process.env.APP_BASE_PATH || '').replace(/\/$/, '');
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests from localhost (dev), the production domain, and direct server calls
     const allowed = [
       'http://localhost:3000',
       'http://localhost:3001',
       'https://mzistudio.com',
       'http://mzistudio.com',
     ];
-    if (!origin || allowed.some(o => origin.startsWith(o))) return cb(null, origin || true);
+    if (!origin || allowed.some(o => origin.startsWith(o))) return cb(null, origin || '*');
     cb(new Error('Not allowed by CORS: ' + origin));
   },
   credentials: true
 }));
+
+// Explicit preflight handler for DM endpoints (called from https production → http local)
+const dmCorsMiddleware = (req, res, next) => {
+  const origin = req.headers.origin || '';
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+};
+app.options(`${BASE}/send-instagram-dm`, dmCorsMiddleware);
+app.options(`${BASE}/send-linkedin-dm`, dmCorsMiddleware);
+app.options(`${BASE}/send-bulk-dms`, dmCorsMiddleware);
 app.use(express.json());
 
 // ── SESSION MIDDLEWARE ─────────────────────────────────────
@@ -311,7 +325,7 @@ app.post(`${BASE}/find-socials`, requireAuth, async (req, res) => {
 
 // ── INSTAGRAM DM SENDER ───────────────────────────────────────
 // Body: { igUsername, igPassword, recipientHandle, message }
-app.post(`${BASE}/send-instagram-dm`, requireAuth, async (req, res) => {
+app.post(`${BASE}/send-instagram-dm`, dmCorsMiddleware, requireAuth, async (req, res) => {
   const { igUsername, igPassword, recipientHandle, message } = req.body;
 
   if (!igUsername || !igPassword) return res.status(400).json({ error: 'Instagram credentials missing' });
@@ -426,7 +440,7 @@ app.post(`${BASE}/send-instagram-dm`, requireAuth, async (req, res) => {
 // ── LINKEDIN DM SENDER ────────────────────────────────────────
 // Body: { liEmail, liPassword, recipientHandle, message }
 // recipientHandle can be a LinkedIn profile slug or company slug
-app.post(`${BASE}/send-linkedin-dm`, requireAuth, async (req, res) => {
+app.post(`${BASE}/send-linkedin-dm`, dmCorsMiddleware, requireAuth, async (req, res) => {
   const { liEmail, liPassword, recipientHandle, message } = req.body;
 
   if (!liEmail || !liPassword) return res.status(400).json({ error: 'LinkedIn credentials missing' });
@@ -547,7 +561,7 @@ app.post(`${BASE}/send-linkedin-dm`, requireAuth, async (req, res) => {
 
 // ── BULK DM SENDER ────────────────────────────────────────────
 // Body: { platform, igUsername, igPassword, liEmail, liPassword, dms: [{handle, message}] }
-app.post(`${BASE}/send-bulk-dms`, requireAuth, async (req, res) => {
+app.post(`${BASE}/send-bulk-dms`, dmCorsMiddleware, requireAuth, async (req, res) => {
   const { platform, igUsername, igPassword, liEmail, liPassword, dms } = req.body;
 
   if (!platform) return res.status(400).json({ error: 'platform required (instagram|linkedin)' });
